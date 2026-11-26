@@ -134,9 +134,9 @@ export function warnLine(hits) {
 if (process.argv.includes("--selftest")) {
   const POS = [
     ["FLAG{th1s_1s_4_t3st}", "brace"],
-    ["LHFLAG{IHDR_CRC_3E8C7A9D}", "brace"],
+    ["DEMOFLAG{4b5c6d7e8f90}", "brace"],
     ["ctfshow{1a2b3c4d}", "brace"],
-    ["0xGame{h3llo_w0rld}", "brace"],
+    ["DEMOCTF{h3llo_w0rld}", "brace"],
     ["BUUCTF{a-b_c!d@e}", "brace"],
     ["n1ctf{2b3c4d5e}", "brace"],
   ];
@@ -146,7 +146,7 @@ if (process.argv.includes("--selftest")) {
     "struct{int a;}",
     "XXX{...}",                     // 模板占位
     "flag{...}",
-    "`LHFLAG{`（练习平台）",           // 文档里的反引号写法，无闭合 }
+    "`DEMOFLAG{`（练习平台）",         // 文档里的反引号写法，无闭合 }
     "[A-Za-z0-9_]{2,20}\\{[^}]{3,}\\}",  // flag-formats.md 里的正则本身
     "awk '{print $1}'",
     '{"a":1,"b":2}',
