@@ -147,7 +147,7 @@ def main():
     rc, out = fgs(lab, "cost", "p1", "--by-step")
     ck("C1 rc=0", rc == 0, out[:200])
     ck("C2 明说未知（未记费）", "未知（未记费" in out, out[-300:])
-    ck("C3 不跑出表头", "逐 Step 成本（#49" not in out, out[-300:])
+    ck("C3 不跑出表头", "逐 Step 成本（只按 step" not in out, out[-300:])
 
     print("D) 静态兜底")
     src = open(FGS, encoding="utf-8").read()

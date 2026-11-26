@@ -152,7 +152,7 @@ def main():
     ck("G3 run-register 核对角色", "rtools, rerr = role_tools(role)" in src, "")
     ck("G4 登记落 tools", '"role": a.role, "tools": rtools' in src, "")
     ck("G5 brief 有 --role", 'p.add_argument("--role", default=None,' in src, "")
-    ck("G6 doctor 第 14 段", "# 14) 工具职责边界的注册表（#45）" in src, "")
+    ck("G6 doctor 第 14 段", "# 14) 工具职责边界的注册表" in src, "")
     doc = open(os.path.join(ROOT, "docs", "并行工作.md"), encoding="utf-8").read()
     ck("G7 文档 §4.6q", "4.6q" in doc, "")
     ck("G8 文档讲三档", "全量" in doc and "白名单" in doc, "")

@@ -1060,7 +1060,7 @@ SOLVER_SYSTEM = """你是 CTF 解题代理（web / pwn / reverse / crypto / misc
 超时被杀就白跑了。"""
 
 
-# ★★ 2026-11-17（历史决策 #47）：会话隔离工作目录。
+# ★★ 2026-11-17（历史决策 ）：会话隔离工作目录。
 #   并行解题时所有 pi 的 cwd 都是仓库根（见上面 A/B 结论：挪 cwd 只省 420ms，却丢掉 AGENTS.md 的
 #   工具/取证纪律，不采用）。于是「写文件」是唯一还没隔离的动作：两路同时写 /tmp/exp.py 或仓库根
 #   同名文件 = 互相覆盖。ARTEX 的做法是每会话 <workDir>/sessions/<sessionID>/，并把「写文件一律到
@@ -1087,7 +1087,7 @@ def lane_spec(scratch) -> str:
     return (
         "\n\n## 文件输出规约（本路独占的写盘位置）\n"
         "只能往这个目录写文件：`" + str(scratch) + "`（环境变量 `" + SCRATCH_ENV + "` 也是它）。\n"
-        "· 不写 `/tmp`、不写仓库根、不写别人的会话目录 —— 多路并发同名文件会互相覆盖（#47）；\n"
+        "· 不写 `/tmp`、不写仓库根、不写别人的会话目录 —— 多路并发同名文件会互相覆盖；\n"
         # ★ R8-A（2026-11-21）：**每条命令都必须自己 cd**，这是 pi 的语义，不是浪费。
         #   实测证据（vendor/pi/dist/bundle/chunks/chunk-44DLKSKE.js）：
         #     createShellToolDefinition(cwd,...) → exec:async(command, cwd, ...)

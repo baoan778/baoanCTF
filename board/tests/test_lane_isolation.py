@@ -77,7 +77,7 @@ def main():
     ck("B4 明写不写 /tmp", "/tmp" in sysmsg, "")
     ck("B5 明写不写仓库根", "仓库根" in sysmsg, "")
     ck("B6 大输出先落盘", "落盘" in sysmsg, "")
-    ck("B7 提到 #47", "#47" in sysmsg, "")
+    ck("B7 点明并发覆盖风险", "多路并发同名文件会互相覆盖" in sysmsg, "")
     no = sdk.solver_system(None)
     ck("B8 没有 scratch 时整段不写", no == sdk.SOLVER_SYSTEM, "")
     ck("B9 没有 scratch 时不出现不存在的路径话术", "文件输出规约" not in no, "")

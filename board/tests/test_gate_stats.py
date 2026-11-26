@@ -21,6 +21,7 @@
 
 测试**不碰真产物**：`PI_LAB_BOARD_DIR` 指向 `tempfile.mkdtemp()`。
 """
+import importlib.util
 import json
 import os
 import shutil
@@ -209,6 +210,61 @@ def main():
         check("降级模式的结语不说「断言全绿」（诚实）",
               "不比断言" in both, both[-300:])
         check("仍输出生产拦截数（能力自证的另一半）", "生产" in both and "gate-toofast" in both, both[-400:])
+
+        print("11) ★ 句柄被占用时不许静默丢一条（Windows 上 PermissionError 的真因）")
+        # 高并发下 os.open(O_APPEND) 会偶发命中「文件正被别的进程持有句柄」→
+        # PermissionError(13)。原实现一次抢不到就 pass，于是 40 路并发里随机少 1 条，
+        # 表现成「并发丢锁」，实际是瞬时争用。这里直接验重试语义（不依赖真实竞态）。
+        os.environ["PI_LAB_BOARD_DIR"] = str(tmp / "projects")
+        spec = importlib.util.spec_from_file_location("_fgs_gate_retry", FGS)
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)  # noqa: S301
+        real_open = os.open
+        tries = []
+
+        def flaky_open(path, flags, mode=0o777):
+            tries.append(1)
+            if len(tries) <= 3:                 # 前 3 次抢不到句柄
+                raise PermissionError(13, "拒绝访问。")
+            return real_open(path, flags, mode)
+
+        target = tmp / "retry-probe.jsonl"
+        os.open = flaky_open
+        try:
+            fd = m._open_append_retry(target, tries=6, wait=0.001)
+        finally:
+            os.open = real_open
+        if fd is not None:
+            os.write(fd, b"x\n")
+            os.close(fd)
+        check("前 3 次 PermissionError → 重试后仍写入成功",
+              fd is not None and target.exists() and target.read_bytes().strip() == b"x",
+              f"fd={fd} exists={target.exists()} bytes={target.read_bytes() if target.exists() else b''}")
+
+        calls = []
+
+        def always_busy(path, flags, mode=0o777):
+            calls.append(1)
+            raise PermissionError(13, "拒绝访问。")
+
+        os.open = always_busy
+        try:
+            fd2 = m._open_append_retry(tmp / "never.jsonl", tries=4, wait=0.001)
+        finally:
+            os.open = real_open
+        check("一直抢不到 → 有界放弃（返回 None，调用次数有上限）",
+              fd2 is None and len(calls) == 4, f"fd={fd2} calls={len(calls)}")
+
+        # 端到端：bump_gate 在句柄争用下不许抛异常（尽力而为，但要有退出路径）
+        os.open = always_busy
+        crashed = None
+        try:
+            m.bump_gate(PID, "gate-toofast", "probe")
+        except Exception as e:                   # noqa: BLE001 —— 这里就是要它「别抛」
+            crashed = repr(e)
+        finally:
+            os.open = real_open
+        check("bump_gate 抢不到句柄也不抛异常（不把主流程带崩）", crashed is None, str(crashed))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

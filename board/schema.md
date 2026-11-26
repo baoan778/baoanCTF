@@ -36,7 +36,7 @@
 | 12 | **不许让 `cost` 在垃圾时间戳上崩** | 时间线要过滤解析失败的串，否则 `max()` 在 `None` 上比大小 → TypeError | `schema.md:472` |
 | 13 | **不许把「试过一次」的否定结论写成 `verified`** | 否定结论会让规划者放弃整条方向：轻率否定 = 一条真路被永久封死，任务越早错越难自愈。`verified` 的否定结论必须带 `meta.attempts`（≥3 种互不相同）；不够格就降 `inferred`。`fgs gate` 是软检查（警告不拦） | `schema.md:102`、`:113`、`board/fgs.py` NEGATIVE_PAT |
 
-### 设计原则：约束落在创建路径上，不在提示词里（#51，2026-11-17）
+### 设计原则：约束落在创建路径上，不在提示词里（2026-11-17）
 
 模型的自觉不是门禁。凡是「必须做 X」的规矩，要么在**写入那一刻**被代码校验，
 要么有一条命令在最后一跳替你查；只写在提示词里（「请记得给 --from」）的规矩，
@@ -90,7 +90,7 @@
 - `open` = 可认领。**谁先 claim 谁做**，claim 失败就换别的（`fgs.py step-claim` 退出码 2）。
 - `claimed` = 正在做。带 `claimed_by`，避免两个 Worker 做同一件事。
 - `done` = 已收口，**必然伴随一个 Fact**（`produced` 边）。
-- `abandoned` = 停了，但**必须带原因**（#40 ①，2026-11-17）：
+- `abandoned` = 停了，但**必须带原因**（2026-11-17）：
   - `abandon_reason = refuted`（默认）= 有证据说明这条路不通 → 后继按「试过、不行」处理，别再派；
     `step-reopen` 要 `--force-refuted`（留审计）。**原先只有一个 `abandoned` 状态，把「超时被杀」也混成
     「证伪」**，于是规划者自己把没被否定的路封死 —— 这是选错题级别的自伤。
@@ -98,12 +98,12 @@
     STATE 的 §2 Parked 与 `fgs chain`（⏱）都会标出来。
   - 两种都要留 `abandon_why`（`fgs step-abandon <pid> <step> --why "…"`，空 WHY 拒收）：
     **机器只知道 dry_streak，WHY 必须是人写的**，否则下一个人只能猜。
-  - `abandon_reason = killed` = 人主动止损（`fgs step-kill <pid> <step> --why …`，#28 ③，2026-11-17）
+  - `abandon_reason = killed` = 人主动止损（`fgs step-kill <pid> <step> --why …`，2026-11-17）
     → **不声称任何证据**；`step-reopen` 可直接续（同 timeout，`fgs chain` 标 ⛔）。
     它与 timeout 的区别在**写入面**：止损之后该 Step 的 `conclude` 在 `publish` 与 `apply` 两处都拒收
-    （#28 ④）—— kill 杀不掉正在跑的子代理，它被打断前可能已经交出一条结论，
+    —— kill 杀不掉正在跑的子代理，它被打断前可能已经交出一条结论，
     若还让它入图，「已经停掉的一路」就又往地基里塞了半截结论。
-  - 纠偏队列 `steer.jsonl`（#28 ①）：主会话 `fgs steer-send` 入队、Worker `fgs steer-drain` 取一条（FIFO）。
+  - 纠偏队列 `steer.jsonl`：主会话 `fgs steer-send` 入队、Worker `fgs steer-drain` 取一条（FIFO）。
     **不是强制注入**（pi 没有 `PreToolUse` 阻塞 hook），取走才算数（审计 `step.steer.drain`），
     `fgs workers` 显示每个 Step「待取纠偏 N 条」。
 
@@ -140,7 +140,7 @@ Cairn 的做法：Worker 每隔 `interval` 给 intent 发 heartbeat，连续两�
 这条是硬的：`fgs.py solved --fact X` 在 `X` 不是 `verified` 时**直接拒绝**（退出码 3）。
 对应 Cairn 的纪律 —— 「只写已证实的事实，不允许把猜测写成事实」。
 
-**否定结论另有一条软门槛（#7，2026-11-17）**：`不可注入 / 端口关闭 / 无登录入口 / 不存在`
+**否定结论另有一条软门槛（2026-11-17）**：`不可注入 / 端口关闭 / 无登录入口 / 不存在`
 这类否定会让规划者**放弃整条方向**，所以 `verified` 的否定结论要能说出「试过哪些手段」——
 `--attempts` 至少 3 种互不相同（换编码 / 参数 / 路径 / 方法 / 身份）。没记够就退回 `inferred`，
 别用轻率结论把路线焊死（原文金句：「任务早期的错误否定尤其会把方向带偏且难以自愈」）。
@@ -207,7 +207,7 @@ fgs fact-add <pid> "异常高 CPU 进程 xmrig，外联 pool.bad.xyz:3333" \
 约束：**自环一律非法**；`part_of` / `derived_from` / `depends_on` / `supersedes` 各自无环；
 只有 `supports` / `contradicts` / `depends_on` 能带一句简短理由。
 
-#### 图压缩：`digest` 节点与 `covers` 边（#34，2026-11-17）
+#### 图压缩：`digest` 节点与 `covers` 边（2026-11-17）
 
 - `digest` 是第五种节点类型（id 前缀 `d`）：`text` = 摘要标题，`covers` = 成员 id 列表，
   `signature` = 成员语义字段（id/type/text/confidence/status）的 `sha256[:16]`，`generation` = 折叠代数。

@@ -118,7 +118,7 @@ def main():
     src = Path(FGS).read_text(encoding="utf-8", errors="replace")
     ck("D1 常量在", "STATE_FOLD_MIN" in src and "STATE_DIGEST_NAME" in src, "")
     ck("D2 指纹不含时间戳（只算结构）", "刻意不算 created_at" in src.split("def _state_digest(g")[1].split("def _state_digest_read")[0], "")
-    ck("D3 摘要纪律表尾", "摘要纪律（#13 ③）" in src, "")
+    ck("D3 摘要纪律表尾", "摘要纪律" in src, "")
     doc = Path(ROOT, "docs", "并行工作.md").read_text(encoding="utf-8", errors="replace")
     ck("D4 文档 §4.6i", "4.6i 压缩纵深三纪律" in doc, "")
     ck("D5 文档写折叠阈值", "PI_FGS_STATE_FOLD_MIN" in doc, "")

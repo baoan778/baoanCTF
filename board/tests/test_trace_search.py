@@ -175,7 +175,7 @@ def main():
     ck("I4 cmd_trace 走统一读取", "def cmd_trace" in src and "_trace_records(" in src
        and "_trace_hit_ctx(" in src, "")
     doc = Path(os.path.join(ROOT, "docs", "并行工作.md")).read_text(encoding="utf-8", errors="replace")
-    ck("I5 文档 §4.6k 存在", "### 4.6k" in doc and "#38" in doc, "")
+    ck("I5 文档 §4.6k 存在", "### 4.6k" in doc, "")
     seg = doc.split("### 4.6k")[1].split("## 5. 收口")[0] if "### 4.6k" in doc else ""
     ck("I6 文档写了三档与纯读", all(x in seg for x in ["摘要", "命中", "全文", "纯读"]), seg[:200])
 

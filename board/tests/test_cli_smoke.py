@@ -312,7 +312,7 @@ def main():
         rc, out, err = run(*args)
         check(f"`{name}` 有输出", bool(out.strip()) or bool(err.strip()))
 
-    print("2b) 图压缩：fold / expand 走一遍（#34，折叠后读视图不许崩）")
+    print("2b) 图压缩：fold / expand 走一遍（折叠后读视图不许崩）")
     _env0 = ENV.get("PI_FGS_COLD_SEC")
     ENV["PI_FGS_COLD_SEC"] = "0"
     try:
@@ -444,7 +444,7 @@ def main():
     check("P2-2 kickoff --target 落到图上（兄弟图判据的来源）",
           "nc1.test:1" in out2, out2[-300:])
 
-    print("4b-2) preset（#46 题型模板：必查点与约束一次带齐）")
+    print("4b-2) preset（题型模板：必查点与约束一次带齐）")
     rc, out, _ = run("preset", "list")
     check("preset list 列出内置题型模板", "题型模板" in out and "web" in out and "pwn" in out, out[-400:])
     rc, out, _ = run("preset", "show", "web")

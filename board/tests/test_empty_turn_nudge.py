@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""board/tests/test_empty_turn_nudge.py — 历史决策 #12：空转续跑（thinking-only 回合注入下一步）。
+"""board/tests/test_empty_turn_nudge.py — 空转续跑（thinking-only 回合注入下一步）。
 
 为什么：最常见的烧轮形态不是报错，而是「想完了不动手」—— 一回合只有思考、没有正文也没有
 任何工具调用，于是下一轮从零再想一遍。ARTEX 用 emptyTurnNudge 把它拉回执行、每轮限 2 次。
@@ -55,7 +55,7 @@ def main():
     src = SERVER.read_text(encoding='utf-8')
 
     # A 静态：接线位置
-    ok('// #12-NUDGE-BEGIN' in src and '// #12-NUDGE-END' in src, 'A1 纯函数段有标记（可切出来直跑）')
+    ok('// NUDGE-SLICE-BEGIN' in src and '// NUDGE-SLICE-END' in src, 'A1 纯函数段有标记（可切出来直跑）')
     ok('function emptyTurnNudgeLimit()' in src, 'A2 有 emptyTurnNudgeLimit')
     ok('function isEmptyTurn(rec)' in src, 'A3 有 isEmptyTurn')
     ok('PI_SOLVE_EMPTY_TURN_NUDGES' in src, 'A4 配置键是 PI_SOLVE_EMPTY_TURN_NUDGES（与空响应重试共用的那个）')
@@ -74,7 +74,7 @@ def main():
     ok('PI_SOLVE_EMPTY_TURN_NUDGES 设为负数' in src, 'A13 额度用完时告诉用户怎么关')
 
     # B 行为：切出纯函数段，用 node 直跑
-    block = slice_between(src, '// #12-NUDGE-BEGIN', '// #12-NUDGE-END')
+    block = slice_between(src, '// NUDGE-SLICE-BEGIN', '// NUDGE-SLICE-END')
     harness = block + '''
 const cases = [];
 function eq(name, got, want) { cases.push([name, JSON.stringify(got), JSON.stringify(want), JSON.stringify(got) === JSON.stringify(want)]); }

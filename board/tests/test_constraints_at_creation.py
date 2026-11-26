@@ -85,7 +85,7 @@ def main():
     print("B) verified 没来源：软提醒 + 审计")
     rc, out = fgs(lab, "fact-add", "p1", "独立观察", "--confidence", "verified")
     ck("B1 仍写入 rc=0", rc == 0, out[:200])
-    ck("B2 软提醒点名 #51 与 --from", "#51" in out and "--from" in out, out[:400])
+    ck("B2 软提醒指出缺 --from", "来源没写在创建路径上" in out and "--from" in out, out[:400])
     ck("B3 明说软提醒不拦", "不拦" in out, out[:400])
     keys = [x.get("op") for x in audits(lab, "p1")]
     ck("B4 审计 fact.verified-no-source", "fact.verified-no-source" in keys, keys[-6:])
@@ -93,9 +93,9 @@ def main():
     print("C) 给了来源 / 不是 verified 都不触发")
     rc, out = fgs(lab, "fact-add", "p1", "有来源的结论", "--confidence", "verified", "--from", "f001")
     ck("C1 有 --from 写入成功", rc == 0, out[:300])
-    ck("C2 不出现 #51 提醒", "#51" not in out, out[:300])
+    ck("C2 不出现软提醒", "来源没写在创建路径上" not in out, out[:300])
     rc, out = fgs(lab, "fact-add", "p1", "只是个怀疑", "--confidence", "inferred")
-    ck("C3 inferred 不触发", rc == 0 and "#51" not in out, out[:300])
+    ck("C3 inferred 不触发", rc == 0 and "来源没写在创建路径上" not in out, out[:300])
     n = len([x for x in audits(lab, "p1") if x.get("op") == "fact.verified-no-source"])
     ck("C4 审计只记了 B 段那一条", n == 1, n)
 

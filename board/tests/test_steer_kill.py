@@ -263,7 +263,7 @@ def main():
     ck("I5 schema 写 killed", "abandon_reason = killed" in schema or BT + "killed" + BT in schema, "")
     ck("I6 schema 写 steer.jsonl", "steer.jsonl" in schema, "")
     doc = Path(os.path.join(ROOT, "docs", "并行工作.md")).read_text(encoding="utf-8", errors="replace")
-    ck("I7 docs 有 §4.6s", "### 4.6s" in doc and "#28" in doc, "")
+    ck("I7 docs 有 §4.6s", "### 4.6s" in doc, "")
     ck("I8 docs 写诚实边界（不是强制注入）", "不是强制注入" in doc or "不强制执行" in doc, "")
     ck("I9 docs 指向本测试", "test_steer_kill.py" in doc, "")
 

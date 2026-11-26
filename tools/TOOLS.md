@@ -29,7 +29,7 @@
 | `probe` | ★ **WSL 侧探活/指纹**（自研 `tools/probe.py`）：状态码/标题/Server/技术栈 + 自动给 `poc` 查询提示；默认 1 rps、只读 GET/HEAD、JSONL 落盘 |
 | **`ctfsurf`** | ★ **前端残迹 → 攻击面推演**（自研 `tools/ctfsurf.py`）：从 HTML/CSS/JS 抠**悬空 CSS 类**（定义未渲染 = 未露出功能的指纹）/ 表单 action 词汇表 / 题面中文动词 → 给出 P0·P1·P9 攻击面清单 + **反爆破闸门**（小应用先穷举词汇表，别开字典）。`ctfsurf --dir work/<pid>` / `--url <u> --save` / `--selftest`。解读见 `skills/ctf-web/references/frontend-residue.md` |
 | **`apiharvest`** | ★ **前端 asset → 接口清单**（自研 `tools/apiharvest.py`）：fetch/axios/XHR `open` 的 URL + router `path/url` 配置 + 引号包裹的路径串 → 端点表（api/route/path/static 分类、模板变量归一成 `{param}`、query 拆参数字段、多方法合并）。`apiharvest --dir work/<pid>` / `--url <u> --save` / `--json` / `--selftest`；单 asset > `--big`（默认 500KB）打**闸门警告**（主 entry 不许整读）。四层打法见 `skills/ctf-web/references/api-recon.md` |
-| **`llmrec`** | **LLM 调用级留痕**（自研 `tools/llmrec.py`，历史决策 #50）：把 pi 会话 JSONL 摊成「一条调用一行」——`n/session/label/ts/provider/model/api/usage{input,output,cache_read,cache_write}/missing_usage/cost/in_chars/out_chars/tools/stop`。`llmrec --dir <会话目录>` / `--file <x.jsonl>` / `--out log/llmrec.jsonl` / `--json` / `--tail N` / `--label judge`。**只做 transcript 层**：wire 原始体本机拿不到，不伪造（见 `docs/并行工作.md` §4.6u）；缺 usage 计 `missing_usage` 并明说「不是真的 0」 |
+| **`llmrec`** | **LLM 调用级留痕**（自研 `tools/llmrec.py`）：把 pi 会话 JSONL 摊成「一条调用一行」——`n/session/label/ts/provider/model/api/usage{input,output,cache_read,cache_write}/missing_usage/cost/in_chars/out_chars/tools/stop`。`llmrec --dir <会话目录>` / `--file <x.jsonl>` / `--out log/llmrec.jsonl` / `--json` / `--tail N` / `--label judge`。**只做 transcript 层**：wire 原始体本机拿不到，不伪造（见 `docs/并行工作.md` §4.6u）；缺 usage 计 `missing_usage` 并明说「不是真的 0」 |
 | **`flagwatch`** | ★ **flag 形态扫描**（自研 `tools/flagwatch.mjs`，零依赖）：从任意文本抠 `XXX{...}` / `flag: xxx` / base64 / hex 变形候选，**宁缺毋滥**（代码构造/模板/正则自身都不误报 —— 本仓 `flag-formats.md`/`AGENTS.md` 扫出 0 命中）。`flagwatch --selftest`。★ 已接成扩展 `.pi/agent/extensions/flag-watch.ts`（`tool_result` 钩子：命中就把警告**插进工具输出** + notify + 记 `log/flag-watch.jsonl`）—— 治「flag 已出现在输出里却被划过去」 |
 | `nuclei` | 模板化漏洞扫描（主力） |
 | `katana` | 爬虫，抓 URL/表单/JS 端点 |
@@ -641,7 +641,7 @@ wpfetch --index-only / --selftest                         # 重写 INDEX.md / �
 —— 打 arXiv:2602.17622 的 Type B 根因（缺实时难度预估→过度承诺低价值分支）；与「原地打转≥3」同阈值（BreachWeave Observer）|
 | **`fgs coverage <pid>`** | **攻击面覆盖率矩阵**（目标×漏洞类型：已证/证伪/未测）**+ 下一步排序器**（按 `目标优先级.md` 权重 × 本项目该类历史产出 × 可达性）。**`gate` 已接入同一判据**（`_coverage_gaps` 同源）→ **未测完且未 solved = 不许收工**（AGENTS.md 第六·五 §8 的机器化）。`--json` 机器读、`--classes` 换类表 |
 | `fgs cost <pid> [--json]` | 成本画像：步数 / 时长 / 坐实密度（verified÷done）/ 边际递减信号 |
-| `fgs cost <pid> --usage <dir> --by-step [--json]` | #49 逐 Step 成本：按 step 绑的会话归集四分类 token/cost（归不上的不摊派；不知道报未知，不当 0） |
+| `fgs cost <pid> --usage <dir> --by-step [--json]` | 逐 Step 成本：按 step 绑的会话归集四分类 token/cost（归不上的不摊派；不知道报未知，不当 0） |
 | `fgs scope <pid> --set "a.edu.cn,b.edu.cn"` | **声明授权范围**（支持 `*.x.com` / CIDR；`--add/--remove/--clear`）。声明后 `swarm` 与 `step-add --target` **fail-closed** 拦界外目标；github/pypi 等基础设施与 dnslog/ceye 等 OOB 天生放行 |
 | `fgs step-heartbeat <pid> <sid> --by X` | 续租（长任务必须定期跑，否则 claim 过期被回收） |
 | `fgs step-reclaim <pid> [--ttl N]` | 回收 claim 过期的僵尸 Step（不回收会把项目死锁在 wait） |

@@ -636,7 +636,7 @@ function patchGuiState(mutate) {
   return run;
 }
 
-// ---- 模型连通性健康（学习清单 #25）：只记真发过请求的结果；没记录就显示「—」，不冒充「正常」 ----
+// ---- 模型连通性健康：只记真发过请求的结果；没记录就显示「—」，不冒充「正常」 ----
 /** 测试失败时的「下一步」：先说清是什么病，再给一句可执行动作（与 board/schema.md 错误文案约定同一条纪律） */
 function testFailNext(reason, status) {
   if (reason === "no-key") return "去 pi 的 /login 登录一次，或在上面「API 密钥」里粘贴后点保存";
@@ -1124,7 +1124,7 @@ class PiRpc {
     this.runtimeId = runtimeId || `rt-${Math.random().toString(16).slice(2, 10)}`;
     this.sessionPath = sessionPath;      // 空 = 新会话（pi 自己建文件）
     this.busy = false;                    // 正在跑回合（回收时要跳过）
-    this.__nudgeLeft = undefined;         // #12 空转续跑剩余额度（agent_start 时按配置重置）
+    this.__nudgeLeft = undefined;         // 空转续跑剩余额度（agent_start 时按配置重置）
     this.lastUsed = Date.now();
     // roleId/roleArgs：智能体的启动参数（提示词 / 工具白名单 / 能力环境说明…），
     // 由 openRuntime / applyStart 编译好后存进来；start() 只负责把它们拼进命令行。
@@ -1217,7 +1217,7 @@ class PiRpc {
         }
         if (rec.type === "agent_start") { this.busy = true; this.__nudgeLeft = emptyTurnNudgeLimit(); }
         else if (rec.type === "agent_settled") this.busy = false;
-        this.noteEmptyTurn(rec);   // #12：判定必须在瘦身/转发之前（只有原始 turn_end 带 content 块与 toolResults）
+        this.noteEmptyTurn(rec);   // 判定必须在瘦身/转发之前（只有原始 turn_end 带 content 块与 toolResults）
         // 流式熔断：病态输出（空白洪流 / 巨型单条）在这一层拦下，不进转发也不进内存
         if (this.guardStream(rec)) continue;
         this.emit(rec);
@@ -1264,7 +1264,7 @@ class PiRpc {
   // （ZeroA 的 Envelope.runtimeId 就是干这个的，前端早就有这套路由）
   //
   // ★ 转发前先瘦身（slimEvent）：pi 的流式 delta 带全量累积快照，不瘦身就是平方放大。
-  /** #12 空转续跑：thinking-only 回合注入「直接执行下一步」，每轮总额度有限、工具回合后刷新。
+  /** 空转续跑：thinking-only 回合注入「直接执行下一步」，每轮总额度有限、工具回合后刷新。
    *
    * 三条边界（照 ARTEX 的口径，写成注释免得后来人改坏）：
    *   ① 额度是**每轮 agent 运行**的，agent_start 时重置；不是整场累计，也不是每回合各给一份。
@@ -1554,7 +1554,7 @@ const BLANK_BURST_MAX = 8 * 1024;
 /** 单条助手消息 delta 总量上限 */
 const MESSAGE_DELTA_MAX = 2 * 1024 * 1024;
 
-/** #12（2026-11-17，ARTEX server/engine.go:600-620 + llmretry.go 借鉴）：空转续跑的额度。
+/** （2026-11-17，ARTEX server/engine.go:600-620 + llmretry.go 借鉴）：空转续跑的额度。
  *
  * 为什么：最常见的一种烧轮形态不是「报错」，而是「想完了不动手」—— 一回合只有思考、
  * 没有正文也没有任何工具调用。它看起来像正常回合（有产出、有 stopReason=end），于是没人管，
@@ -1564,7 +1564,7 @@ const MESSAGE_DELTA_MAX = 2 * 1024 * 1024;
  * 与「空响应重试」共用同一个键（那条走 SDK 层的无内容块原样重发，尚未在 baoan 落地；
  * 落地时直接调这个函数，别另起一个配置项 —— 用户心智是「没产出实质内容就再来一次」）。
  */
-// #12-NUDGE-BEGIN
+// NUDGE-SLICE-BEGIN
 const EMPTY_TURN_NUDGE_DEFAULT = 2;
 function emptyTurnNudgeLimit() {
   const raw = process.env.PI_SOLVE_EMPTY_TURN_NUDGES;
@@ -1588,7 +1588,7 @@ function isEmptyTurn(rec) {
   const toolResults = Array.isArray(rec.toolResults) ? rec.toolResults.length : 0;
   return !hasText && !hasToolCall && toolResults === 0;
 }
-// #12-NUDGE-END
+// NUDGE-SLICE-END
 
 /** usage 是不是全零（前端 applyUsage 对全零的做法是“直接忽略”，所以这类字段没有信息量） */
 function isZeroUsage(u) {
@@ -1668,7 +1668,7 @@ function slimEvent(rec) {
 }
 
 // ---------------------------------------------------------------- SSE 广播
-// ★ #17（2026-11-17，ARTEX server/server.go:2996-3072 借鉴）：断线自愈三件套
+// ★ （2026-11-17，ARTEX server/server.go:2996-3072 借鉴）：断线自愈三件套
 //   ① 每帧带自增 id（浏览器据此在重连时自动发 Last-Event-ID）
 //   ② 握手时 Last-Event-ID **覆盖** ?since=（自动重连带的头才是「断在哪一条」的真相）
 //   ③ 从环形缓冲按 id 补偿回放；被挤掉的那段必须自报（ui:gap），否则前端把「没收到」当「没发生」
@@ -1685,7 +1685,7 @@ function broadcast(rec) {
   for (const res of clients) { try { res.write(line); } catch {} }
 }
 
-// #17-REPLAY-BEGIN
+// SSE-REPLAY-BEGIN
 // 纯逻辑：给定环形缓冲与 since，算出「该补发哪一段」。单独成段是为了能切出来直跑
 // （board/tests/test_sse_replay.py）—— 这里最容易看着对、实际漏一条，而漏掉的
 // 那条可能就是最后的空转帧，界面于是永远停在「正在想」。
@@ -1703,7 +1703,7 @@ function pickReplay(recent, since, limit) {
   if (items.length > limit) { dropped = items.length - limit; items = items.slice(-limit); }
   return { items, lost, dropped, truncated: lost > 0 || dropped > 0 };
 }
-// #17-REPLAY-END
+// SSE-REPLAY-END
 pi.subscribe(broadcast);
 
 // 开第一条会话进程：优先回到"上次看的会话"（存在 work/ui/.last-session.json），
@@ -3311,9 +3311,9 @@ async function listSkills() {
   return out.sort((a, b) => a.id.localeCompare(b.id));
 }
 
-// ---------------------------------------------------------------- #43 调用次数（会话 JSONL 聚合）
+// ---------------------------------------------------------------- 调用次数（会话 JSONL 聚合）
 /**
- * #43 累计调用次数：从当前会话 JSONL 里数 toolName → 次数。
+ * 累计调用次数：从当前会话 JSONL 里数 toolName → 次数。
  *
  * 为什么从会话文件数，而不是在 RPC 事件里自增：
  *  · RPC 事件流没有「累计」语义，服务一重启界面上的计数就归零，看着像没调用；
@@ -3358,9 +3358,9 @@ async function sessionToolCounts(maxBytes = 512 * 1024) {
 }
 
 
-// ---------------------------------------------------------------- #35 旁路提问（/btw）
+// ---------------------------------------------------------------- 旁路提问（/btw）
 /**
- * #35 旁路提问：想问「这个头是不是 gzip 错位」不该把整段输出再喂一遍主线。
+ * 旁路提问：想问「这个头是不是 gzip 错位」不该把整段输出再喂一遍主线。
  *
  * 通道纪律（照 ARTEX sidequestion 的边界，只落我们真用得上的部分）：
  *  · 独立进程 + 独立临时会话目录：不写进当前会话、不进活动流、不碰黑板/任务图；
@@ -3816,7 +3816,7 @@ const server = createServer(async (req, res) => {
     }
 
     if (p === "/api/skills") {
-      // #43 技能页给「本次会话调用了几次」：calls=0 就是「未命中」（技能在，但这次没用上）
+      // 技能页给「本次会话调用了几次」：calls=0 就是「未命中」（技能在，但这次没用上）
       const agg = await sessionToolCounts().catch(() => ({ calls: {}, total: 0, session: "", truncated: false }));
       const skills = (await listSkills()).map((s) => ({ ...s, calls: agg.calls[s.id] || 0 }));
       return json(res, { skills, callsTotal: agg.total, callsSession: agg.session, callsTruncated: agg.truncated });
@@ -4009,7 +4009,7 @@ const server = createServer(async (req, res) => {
 
     // 新增 / 更新一个提供商（写 models.json；写入前自动备份，新会话生效）
     /**
-     * 运行中换模型（#27）：从**下一次 LLM 调用**生效，不重启进程、不丢上下文。
+     * 运行中换模型：从**下一次 LLM 调用**生效，不重启进程、不丢上下文。
      *
      * 为什么必须走 set_model RPC 而不是 /api/start：applyStart 会换启动参数 → 重启 pi →
      * 当前会话进程里的上下文全部丢掉。赛中最痛的正是「跑着跑着 400 / 额度尽 / 模型开始胡说」，
@@ -4421,13 +4421,13 @@ const server = createServer(async (req, res) => {
     // 工具 / 能力目录（智能体页「能力」页签用；也供将来的工具页）
     if (p === "/api/tools") {
       try {
-        // #43 顺手带上本次会话的工具调用次数（前端角标用）；数不出来就是空表，不让整个目录页失败
+        // 顺手带上本次会话的工具调用次数（前端角标用）；数不出来就是空表，不让整个目录页失败
         const agg = await sessionToolCounts().catch(() => ({ calls: {}, total: 0, session: "", truncated: false }));
         return json(res, { ...capabilityCatalogPayload(), calls: agg.calls, callsTotal: agg.total, callsSession: agg.session, callsTruncated: agg.truncated });
       } catch (e) { return json(res, { error: e.message }, 500); }
     }
 
-    // #35 旁路提问：独立进程、无工具、超时即杀、不进主线。返回的 note 由前端原样显示，
+    // 旁路提问：独立进程、无工具、超时即杀、不进主线。返回的 note 由前端原样显示，
     // 提示「这句话只在这一屏，不写会话也不写黑板」—— 免得下一个人以为它在 transcript 里。
     if (p === "/api/btw" && req.method === "POST") {
       const body = await readJsonBody(req);
@@ -4478,7 +4478,7 @@ const server = createServer(async (req, res) => {
         "content-type": "text/event-stream; charset=utf-8",
         "cache-control": "no-store",
         connection: "keep-alive",
-        // ★ #17：反代会把整条流攒在缓冲区里，浏览器连上却一个字节收不到 —— 这是唯一关掉它的开关
+        // ★ 反代会把整条流攒在缓冲区里，浏览器连上却一个字节收不到 —— 这是唯一关掉它的开关
         "x-accel-buffering": "no",
       });
       if (typeof res.flushHeaders === "function") res.flushHeaders();

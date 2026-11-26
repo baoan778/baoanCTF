@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""#17 SSE 断线自愈：事件自增 id / Last-Event-ID 覆盖 ?since / 按 id 补偿回放 / 反代缓冲头。
+"""SSE 断线自愈：事件自增 id / Last-Event-ID 覆盖 ?since / 按 id 补偿回放 / 反代缓冲头。
 
 为什么这么测：
   A 纯逻辑 —— 从 server.mjs 切出 pickReplay 交 node 直接跑（不启服务、不打桩）。
@@ -33,9 +33,9 @@ src = open(SRV, encoding="utf-8").read()
 api = open(API, encoding="utf-8").read()
 
 print("A 纯逻辑：pickReplay（node 直跑源码切片）")
-b = src.find("// #17-REPLAY-BEGIN")
-e = src.find("// #17-REPLAY-END")
-ok(b > 0 and e > b, "A0 server.mjs 里有 #17-REPLAY 切片标记", (b, e))
+b = src.find("// SSE-REPLAY-BEGIN")
+e = src.find("// SSE-REPLAY-END")
+ok(b > 0 and e > b, "A0 server.mjs 里有 SSE-REPLAY 切片标记", (b, e))
 code = src[b:e] if (b > 0 and e > b) else ""
 
 cases = [
@@ -82,7 +82,7 @@ if node:
     js = os.path.join(tmp, "p.mjs")
     body = code + chr(10) + driver + chr(10)
     if not code.strip().startswith("//"):
-        body = "// #17-REPLAY-BEGIN" + chr(10) + body
+        body = "// SSE-REPLAY-BEGIN" + chr(10) + body
     with open(js, "w", encoding="utf-8", newline=chr(10)) as f:
         f.write(body)
     r = subprocess.run([node, js], stdout=subprocess.PIPE, stderr=subprocess.PIPE)

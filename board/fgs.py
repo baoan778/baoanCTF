@@ -254,7 +254,7 @@ GATES = {
     "scope-out":           "越界目标（授权范围拦下）",
     "lead-conflict":       "调度权被别人持有",
     "claim-conflict":      "Step 已被别人认领",
-    "claim-dup":           "同一入口已有另一路在跑（#44 同目标只跑一个）",
+    "claim-dup":           "同一入口已有另一路在跑（同目标只跑一个）",
     "gate-toofast":        "太快出解（<3 分钟且无路径说明）",
     "dep-blocked":         "依赖未就绪就想 claim（前序 Step 没做完）",
 }
@@ -907,6 +907,18 @@ def bump_gate(pid: str, gate_id: str, reason: str = "") -> None:
       不引入 fcntl（Windows 没有），不复用读-改-写（台账必须 append-only 才留得下每条）。
       锁拿不到就**放弃并返回**（尽力而为原则不变：门禁自证绝不能把主流程带崩）。
 
+    ★ 2026-11-26 定位「20 并发偶发少 1 条」的**真因**（不是锁，也不是计数逻辑）：
+      高并发下 `os.open(O_APPEND)` 会偶发抛 `PermissionError(13, '拒绝访问。')`
+      —— 该文件此刻正被别的进程 / 杀软 / Windows 索引器持有句柄，NTFS 直接拒共享打开。
+      实测（40 路并发 + CPU 压力，本机 NTFS）：8 轮里必中 1 轮，只丢 **1** 条，
+      且台账里没有坏行、没有半截写 —— 说明失败发生在 open 这一步，一行都没落盘。
+      原实现 `except (OSError, Fail): pass` 把它当「尽力而为」静默吞掉 →
+      看起来像并发丢锁，实际是**瞬时句柄争用**。
+
+      修法：`os.open` 这一小步做**有界重试**（6 次，20→640ms 指数退避）。
+      仍遵守「尽力而为」上限（总等待 <1.3s，绝不会把主流程拖住），
+      但把过去那种「一次抢不到就永久丢」变成「让开一下再抢」。
+
     归写是尽力而为的，但**绝不允许把主流程带崩**（写不进去就放弃）。
     """
     if gate_id not in GATES:
@@ -922,8 +934,9 @@ def bump_gate(pid: str, gate_id: str, reason: str = "") -> None:
         # 这不违背「尽力而为」：台账是旁路，卡住 30s 只在极端拥塞下发生，
         # 而丢一条就是「门禁自证」少记一次 —— 后者更难查。
         with Lock(pdir(pid), timeout=30.0):
-            fd = os.open(pdir(pid) / GATE_LEDGER,
-                         os.O_APPEND | os.O_CREAT | os.O_WRONLY, 0o644)
+            fd = _open_append_retry(pdir(pid) / GATE_LEDGER)
+            if fd is None:
+                return                      # 重试仍抢不到句柄 → 放弃（尽力而为）
             try:
                 while buf:                  # os.write 理论上可能短写：写到完为止
                     buf = buf[os.write(fd, buf):]
@@ -931,6 +944,28 @@ def bump_gate(pid: str, gate_id: str, reason: str = "") -> None:
                 os.close(fd)
     except (OSError, Fail):
         pass
+
+
+def _open_append_retry(path: Path, tries: int = 6, wait: float = 0.02):
+    """`os.open(O_APPEND|O_CREAT|O_WRONLY)` 的有界重试；抢不到句柄返回 None。
+
+    为什么需要：Windows/NTFS 上别的进程（另一个 gate 进程在读台账、杀软扫描、
+    索引器）短暂持有该文件句柄时，`os.open` 直接抛 `PermissionError(13)`，
+    而不是排队等 —— 单次失败就丢一条拦截记录。退避 20/40/80/160/320/640ms，
+    总计 <1.3s，既能把瞬时争用让过去，也不会把主流程拖住。
+    """
+    for i in range(tries):
+        try:
+            return os.open(path, os.O_APPEND | os.O_CREAT | os.O_WRONLY, 0o644)
+        except PermissionError:
+            if i == tries - 1:
+                return None
+            time.sleep(wait * (2 ** i))
+        except OSError:
+            if i == tries - 1:
+                return None
+            time.sleep(wait * (2 ** i))
+    return None
 
 
 def _gate_ledger_counts(pid: str) -> dict:
@@ -2108,7 +2143,7 @@ def cmd_step_kill(a):
               "（黑板只改图，杀不了进程）")
     else:
         print("   该 Step 没绑会话：确认没人在跑它（否则用 fgs bind 先绑上再 interrupt）")
-    print("   → 迟到写入已拒收：该 Step 的 conclude 现在 publish / apply 都会拒（#28 ④）")
+    print("   → 迟到写入已拒收：该 Step 的 conclude 现在 publish / apply 都会拒")
     print("   → 要续上：" + "fgs step-reopen " + a.project + " " + a.step + " --why \"…\"")
     if pend:
         print("   ⚠ 还有 " + str(pend) + " 条未消费的纠偏消息（Step 停了就没人取；重开后可继续 drain）")
@@ -5953,7 +5988,7 @@ def _usage_by_step(g: dict, per: dict) -> dict:
 
 def _print_by_step(b: dict) -> None:
     print()
-    print("# 逐 Step 成本（#49：只按 step 绑定的会话归集，挂不上的不摊派）")
+    print("# 逐 Step 成本（只按 step 绑定的会话归集，挂不上的不摊派）")
     head = ["step", "status", "session", "入", "出", "缓读", "缓写", "token", "cost"]
     print("  " + head[0].ljust(6) + head[1].ljust(9) + head[2].ljust(22)
           + "".join(h.rjust(11) for h in head[3:]) + "  产出 fact")
@@ -6495,7 +6530,7 @@ def cmd_fact_add(a):
         # 不拒（独立观察也是事实），但留审计 + 提示：门禁的孤点计数会算它。
         if a.confidence == "verified" and not (a.frm or []):
             audit(a.project, a.actor, "fact.verified-no-source", {"id": fid})
-            print("! 来源没写在创建路径上（#51）：这条是 verified，但没有 --from 指出来源"
+            print("! 来源没写在创建路径上：这条是 verified，但没有 --from 指出来源"
                   "（哪条 step / fact 生出了它）。`fgs gate` 的孤点检查会把它算进去 ——"
                   "补 --from，或明确这是独立观察。本条仍写入：软提醒，不拦。")
         # #7：否定结论的软提醒（不拦）。机器不判「手段够不够」，只判「有没有记」——
@@ -6503,7 +6538,7 @@ def cmd_fact_add(a):
         _neg = negative_hit(a.text)
         _att = attempts_of(meta)
         if _neg and a.confidence == "verified" and len(_att) < NEGATIVE_MIN_ATTEMPTS:
-            print(f"! 否定结论证据门槛（#7）：正文命中「{_neg}」，但只记了 {len(_att)} 种已试手段"
+            print(f"! 否定结论证据门槛：正文命中「{_neg}」，但只记了 {len(_att)} 种已试手段"
                   f"（< {NEGATIVE_MIN_ATTEMPTS} 种互不相同）。这种结论会让整条方向被焊死 ——"
                   f"先在该意图内把合理手段走完（换编码/参数/路径/方法/身份），"
                   f"或补 --attempts ...（可重复），或退回 --confidence inferred。"
@@ -6856,7 +6891,7 @@ def cmd_solved(a):
     if _ev_ok:
         print(f"  证据正文重算一致：{_ev_ok} 份（内容寻址 {EVIDENCE_DIRNAME}/blobs/…）")
     if _ev_legacy:
-        print(f"  ⚠ {_ev_legacy} 条已盖章 Fact 没有内容寻址正文（#6 之前盖的旧章）→ "
+        print(f"  ⚠ {_ev_legacy} 条已盖章 Fact 没有内容寻址正文（旧版盖章，未记指纹）→ "
               f"重跑 fgs verify --from <原始输出> 可补指纹")
 
 
@@ -7790,7 +7825,7 @@ def cmd_publish(a):
             _s = _g.get("nodes", {}).get(_late) or {}
             if (_s.get("type") == "step" and _s.get("status") == "abandoned"
                     and step_abandon_reason(_s) == "killed"):
-                raise Fail(f"{_late} 已止损（#28 kill，迟到写入不收）："
+                raise Fail(f"{_late} 已止损（迟到写入不收）："
                            f"{_s.get('abandon_why') or '—'}。要交这几分钟的结果，先让主会话 "
                            f"fgs step-reopen {a.project} {_late} --why … 再重投；别改 step id 绕。", 3)
     payload["_published_by"] = a.by
@@ -7989,7 +8024,7 @@ def _validate_outbox(g: dict, p: dict, pid: str = ""):
         if p.get("confidence", "unverified") not in CONFIDENCE:
             raise Fail(f"confidence 必须是 {CONFIDENCE}")
         if s.get("status") == "abandoned" and step_abandon_reason(s) == "killed":
-            raise Fail(f"{p.get('step')} 已止损（#28 kill）—— 迟到结论不再入图；"
+            raise Fail(f"{p.get('step')} 已止损（迟到结论不再入图）；"
                        f"先 fgs step-reopen 再 apply")
         _clean_meta(p.get("meta"))          # conclude 也支持结构化元数据
     elif op == "relate":
@@ -9263,7 +9298,7 @@ def cmd_doctor(a):
                   and (n.get("meta") or {}).get("verified_by") == "verbatim"
                   and not (n.get("meta") or {}).get("evidence_sha"))
     if _legacy:
-        warn(f"{_legacy} 条盖章 Fact 是 #6 之前的旧章（无内容寻址正文）→ "
+        warn(f"{_legacy} 条盖章 Fact 是旧版盖章（无内容寻址正文）→ "
              f"重跑 fgs verify --from <原始输出> 可补指纹")
 
     # 14) 工具职责边界的注册表（#45）
@@ -10086,9 +10121,9 @@ def _render_state(pid: str) -> None:
                 print("> - %s · verified：%s" % (i, _one_line(n.get("text") or "", 60)))
     if _hot:
         print("")
-        print("> 活跃已盖章事实 %d 条（在追的链上 / 刚盖章）—— 这些**永不折叠**（#13 ①）。" % len(_hot))
+        print("> 活跃已盖章事实 %d 条（在追的链上 / 刚盖章）—— 这些**永不折叠**。" % len(_hot))
     print("")
-    print("> 摘要纪律（#13 ③）：综合不罗列（同类合并一句）· 保留区分度（别写「试了一些」）·"
+    print("> 摘要纪律：综合不罗列（同类合并一句）· 保留区分度（别写「试了一些」）·"
           " observed 与 inferred 分开（inferred 的否定标「可复核」）· 每条带 id 才可还原 · 只写图上有的。")
     print("\n## 4. Queue（待办 · 按便宜的先做排序）\n")
     print("| 序 | 题/子目标 | 预估耗时 | 为什么排这 | 依赖 |")
@@ -10844,12 +10879,12 @@ def main():
     p.add_argument("--kind", default=None, choices=["ctf", "pentest"],
                    help="题型（默认 ctf；--template 给了就用模板里的）")
     p.add_argument("--goal"); p.add_argument("--target")
-    p.add_argument("--template", help="题型模板 nkey（fgs preset list 看有哪些；#46）")
+    p.add_argument("--template", help="题型模板 nkey（fgs preset list 看有哪些）")
     p.add_argument("--with-steps", dest="with_steps", action="store_true",
                    help="把模板的必查点落成 Step（默认只打印）")
     p.add_argument("--json", action="store_true")
 
-    p = add("preset", cmd_preset, help="题型模板库：#46 list / show / save / rm")
+    p = add("preset", cmd_preset, help="题型模板库：list / show / save / rm")
     p.add_argument("action", nargs="?", default="list", choices=["list", "show", "save", "rm"])
     p.add_argument("name", nargs="?")
     p.add_argument("--from", dest="from_pid", help="save 的默认值来源板（pid）")
@@ -10890,7 +10925,7 @@ def main():
 
     p = add("trace", cmd_trace, help="工具留痕检索（摘要流 / --q 关键字命中 / --step tNNNN 取全文；纯读）")
     p.add_argument("project", nargs="?", default="", help="只留这个板的留痕（省略 = 不过滤）")
-    p.add_argument("--q", default="", help="关键字：只回命中的记录 + 上下文（#38 第二档）")
+    p.add_argument("--q", default="", help="关键字：只回命中的记录 + 上下文（第二档：命中行带上下文）")
     p.add_argument("--step", default="", help="留痕 id（tNNNN，逗号分隔）：回全文，一次最多 5 条")
     p.add_argument("--lane", default="", help="只留这个会话（留痕的 session 字段）的记录")
     p.add_argument("--json", action="store_true", help="机器可读（不含正文，只列字段）")
@@ -10909,7 +10944,7 @@ def main():
     p.add_argument("--state", action="store_true",
                    help="按 templates/commander-state.md 渲染五段式压缩交接骨架（S2.5）")
     p.add_argument("--digest", action="store_true",
-                   help="只打状态指纹（#13 ②：与上次相同就该复用上轮 STATE，不用重画）")
+                   help="只打状态指纹（与上次相同就该复用上轮 STATE，不用重画）")
 
     # ⚠️ 新增子命令时：**必须插在上一命令的 add_argument 之后**，否则会把上一条的
     #    `project` 等参数抢过来（同一个 argparse subparser 对象）。这个坑踩过两次
@@ -10938,9 +10973,9 @@ def main():
     p = add("cost", cmd_cost, help="成本画像：步数/时长/坐实密度/边际递减信号/真实 token 用量")
     p.add_argument("project"); p.add_argument("--json", action="store_true")
     p.add_argument("--usage", default=None, metavar="DIR_OR_FILE",
-                   help="#39⑤ pi 会话目录（或单个 .jsonl）→ 汇总真实 usage；不给就明说未知，不拿估算当用量")
+                   help="pi 会话目录（或单个 .jsonl）→ 汇总真实 usage；不给就明说未知，不拿估算当用量")
     p.add_argument("--by-step", dest="by_step", action="store_true",
-                   help="#49 逐 Step 成本：按 step 绑定的会话归集用量（归不上的不摊派）")
+                   help="逐 Step 成本：按 step 绑定的会话归集用量（归不上的不摊派）")
 
     p = add("blindspot", cmd_blindspot,
             help="未验证假设清单：谁还没验证却被当前提用着 / 证伪堆积没换面 / 覆盖空洞（只读）")
@@ -10962,7 +10997,7 @@ def main():
                         "（把「读 <文件> 并照做」当 task 传下去）。隐含 --as-task。"
                         "比 --as-task 再省 ~2.3K 字符/次派活")
     p.add_argument("--role", default=None,
-                   help="派的是哪个角色（决定工具白名单，写进任务书；#45）")
+                   help="派的是哪个角色（决定工具白名单，写进任务书）")
     p.add_argument("--restart", action="store_true",
                    help="重启简报：题面 + 已坐实 + 已证伪路线，给零上下文的第 2+ 次尝试（买一致性，不是峰值）")
     p.add_argument("--ref", action="store_true",
@@ -11027,7 +11062,7 @@ def main():
     p.add_argument("--ignore-deps", dest="ignore_deps", action="store_true",
                    help="前序 Step 未完成也允许 claim（留审计）")
     p.add_argument("--allow-dup", dest="allow_dup", action="store_true",
-                   help="同一入口已有另一路在跑也允许 claim（留审计；#44）")
+                   help="同一入口已有另一路在跑也允许 claim（留审计）")
 
     p = add("step-conclude", cmd_step_conclude)
     p.add_argument("project"); p.add_argument("step"); p.add_argument("fact")
@@ -11038,19 +11073,19 @@ def main():
     p.add_argument("project"); p.add_argument("step")
 
     p = add("step-abandon", cmd_step_abandon,
-            help="放弃 Step（#40：--reason refuted|timeout —— 超时不是证伪，可重开）")
+            help="放弃 Step（--reason refuted|timeout —— 超时不是证伪，可重开）")
     p.add_argument("project"); p.add_argument("step")
     p.add_argument("--reason", choices=ABANDON_REASONS, default=ABANDON_DEFAULT_REASON,
                    help="refuted=证伪（默认，别再来） / timeout=只是没跑完（可 step-reopen）")
     p.add_argument("--why", default=None, help="为什么放弃（必填；一句话具体到证据）")
 
     p = add("step-kill", cmd_step_kill,
-            help="[主会话] 止损一个 Step（#28 ③：只杀这一路；迟到 conclude 拒收，可 step-reopen）")
+            help="[主会话] 止损一个 Step（只杀这一路；迟到 conclude 拒收，可 step-reopen）")
     p.add_argument("project"); p.add_argument("step")
     p.add_argument("--why", default=None, help="为什么止损（必填）")
 
     p = add("step-reopen", cmd_step_reopen,
-            help="把 abandoned 的 Step 翻回 open（#40：timeout 直接可重开，refuted 要 --force-refuted）")
+            help="把 abandoned 的 Step 翻回 open（timeout 直接可重开，refuted 要 --force-refuted）")
     p.add_argument("project"); p.add_argument("step")
     p.add_argument("--force-refuted", dest="force_refuted", action="store_true",
                    help="证伪过的也重开（留审计；只有拿到反例/新证据才用）")
@@ -11114,7 +11149,7 @@ def main():
                    help="把这次转向记进审计（workers 会显示转向次数）")
 
     p = add("steer-send", cmd_steer_send,
-            help="[主会话] 把一条纠偏消息入队给某个 Step（#28 ①：真通道）")
+            help="[主会话] 把一条纠偏消息入队给某个 Step（真通道）")
     p.add_argument("project"); p.add_argument("step")
     p.add_argument("--text", required=True, help="纠偏正文（说清换到哪个面，别只说加油）")
     p.add_argument("--by", dest="actor", default="lead")
@@ -11156,7 +11191,7 @@ def main():
     p.add_argument("--time", dest="time", help="事件发生时间（ISO8601，尽量 UTC）")
     p.add_argument("--ioc", action="append", help="IOC，格式 类型=值；可重复（例 --ioc IP=1.2.3.4）")
     p.add_argument("--attempts", action="append", default=None,
-                   help="#7 否定结论的「已试手段」清单（可重复，≥3 种互不相同才够格；"
+                   help="否定结论的「已试手段」清单（可重复，≥3 种互不相同才够格；"
                         "防「curl 了一次 404」被写成「不可注入」把整条路焊死）")
 
     p = add("relate", cmd_relate)
@@ -11203,7 +11238,7 @@ def main():
     p.add_argument("--by", dest="actor", default="operator")
 
     p = add("flag-retest", cmd_flag_retest,
-            help="[#31] 复测：reproduced / fixed / inconclusive —— 只有 fixed 自动改状态")
+            help="复测：reproduced / fixed / inconclusive —— 只有 fixed 自动改状态")
     p.add_argument("project"); p.add_argument("--id", required=True)
     p.add_argument("--verdict", required=True, choices=list(RETEST_VERDICTS))
     p.add_argument("--why", required=True, help="一句话：依据什么判定的（必填）")

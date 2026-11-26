@@ -81,7 +81,7 @@ def main():
         make_board(lab)
         rc, out = run(lab, "fact-add", "n1", "22 端口关闭，无登录入口", "--confidence", "verified")
         ck("A1 rc=0（软提醒不拦）", rc == 0, f"rc={rc} out={out[-300:]}")
-        ck("A2 回显命中词", "否定结论证据门槛（#7）" in out and "无登录入口" in out, out[-400:])
+        ck("A2 回显命中词", "否定结论证据门槛" in out and "无登录入口" in out, out[-400:])
         ck("A3 明说软提醒", "软提醒，不拦" in out, out[-300:])
         g = graph(lab)
         ck("A4 Fact 照常写入", g["nodes"].get("f001", {}).get("confidence") == "verified")

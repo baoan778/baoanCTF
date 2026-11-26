@@ -159,7 +159,7 @@ def main():
         rc, out = run(lab, "solved", "e1", "--fact", "f001", "--desc", "解出",
                       "--no-lanes", "单线测试")
         ck("G1 仍放行（历史板子不能被新规则锁死）", rc == 0, out[-400:])
-        ck("G2 提醒旧章", "旧章" in out, out[-400:])
+        ck("G2 提醒旧章", "未记指纹" in out, out[-400:])
 
         print(f"\n{_passed}/{_passed + _failed} 断言通过")
         return 0 if _failed == 0 else 1

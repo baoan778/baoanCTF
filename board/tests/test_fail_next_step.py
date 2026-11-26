@@ -79,7 +79,7 @@ def main():
     ck("D1 rc=0", rc == 0, f"rc={rc} {out[:160]}")
     ck("D2 文案含 claimed", "claim" in out.lower(), out[:160])
 
-    print("E) #25 接线（静态兜底）")
+    print("E) 下一步接线（静态兜底）")
     page = os.path.join(UI, "web", "src", "pages", "ModelsPage.tsx")
     srv = os.path.join(UI, "server.mjs")
     if os.path.exists(page) and os.path.exists(srv):
