@@ -173,3 +173,29 @@ NUL
 work/bench-*/
 work/inj/
 work/solve/
+
+# ── 2026-11-26（发布前审计）：运行态与真实战果，一律不入库 ────────────────
+# 1) 解题过程产物：log/ 下的会话级落盘。这些文件里带**真实靶机 IP、题目内容、
+#    读出的 flag 片段**，属于实战痕迹，不是产品。历史上误跟踪过 4 个：
+#      log/.solve-*.out（逐题收尾报告）、log/kill-guard.jsonl（拦截记录含靶场命令）、
+#      log/ledger-compact.jsonl、log/keepalive-budget.json（运行计数）
+log/.solve-*.out
+log/kill-guard.jsonl
+log/ledger-compact.jsonl
+log/keepalive-budget.json
+log/watchdog.log
+log/supervisor.log
+log/thinking-frame.log
+log/shard-*.log
+log/pi-agent-sync.log
+log/autostart.log
+
+# 2) 跨题战果库：`docs/writeups/` 的**骨架**随仓库走（产品功能），
+#    但**填进去的内容**是本机真实战果（真 flag 原文、真实目标、客户/赛场信息）。
+#    判定：这份仓库对外发布的是「工具」，不是「我们的战绩」。
+#    需要保留历史战果的，放本机私有目录或用 git stash 之外的副本。
+#    ★ 只忽略数据文件，不忽略骨架 —— 松开下面四行即可恢复跟踪。
+#    （当前状态：数据文件已清空为初始形态并入库，正常使用时产生的战果不会再进 git）
+docs/writeups/WPs/
+docs/writeups/手法库.audit.jsonl
+docs/writeups/手法库.candidates.json

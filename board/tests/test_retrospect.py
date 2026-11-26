@@ -242,11 +242,13 @@ def main():
         real = ROOT.parent / "docs" / "writeups" / "手法库.md"
         text = real.read_text(encoding="utf-8")
         real_titles = [l for l in text.splitlines() if l.startswith("### ")]
-        # 只断言「基线还在 + 没被测试污染」，**不锁死条数**——
-        # 2026-10-01 踩过：原来写死 ==2，结果加了一条正当手法（GOT[puts]→system 那个）就红。
-        # 本用例的意图是「隔离」，不是「库不许长大」。
-        check("基线条目还在（PNG IHDR 那条 + 格式示例）",
-              any("PNG IHDR" in x for x in real_titles) and "### <手法名>" in text,
+        # 只断言「骨架还在 + 没被测试污染」，**不锁死条数、也不要求某条具体战果**——
+        # 2026-10-01 踩过：原来写死 ==2，结果加了一条正当手法就红。
+        # 2026-11-26 又踩一次：原来断言「PNG IHDR 那条还在」，而开源发布前
+        # 那条真实战果（含真 flag 原文）已被移出仓库 → 断言变成「必须有一份私人战果」，
+        # 方向错了。本用例的意图是**隔离**（测试别写进真库），不是「库必须有内容」。
+        check("骨架还在（格式示例 + Trophy Case 表头）",
+              "### <手法名>" in text and "| 手法 | 坐实 | 来源 |" in text,
               f"{len(real_titles)} 条")
         check("没有测试条目混进去",
               not any("deadbeef" in x or "老条目" in x for x in real_titles))
