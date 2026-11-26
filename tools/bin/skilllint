@@ -1,0 +1,19 @@
+#!/bin/bash
+# skilllint —— 技能库体检（实现 <仓库根>/tools/skilllint.py）
+#
+# ★ 路径自解析（2026-10-12，适配发布包 / exe / 换目录）：
+#   原来写死 <仓库根> 与 venv 的绝对路径 —— 仓库一搬家或打进 exe 包，
+#   敲 skilllint 就是「找不到解释器 / 找不到实现」，而且看不出根因。
+#   venv 不在时回落到 PATH 上的 python3（skilllint 只用标准库）。
+T="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+if [ -n "${PI_LAB_PYTHON:-}" ]; then
+  PY="$PI_LAB_PYTHON"
+else
+  PY="$T/venv/bin/python"
+  [ -x "$PY" ] || PY="$(command -v python3 || command -v python)"
+fi
+if [ -z "$PY" ] || [ ! -f "$T/skilllint.py" ]; then
+  echo "skilllint: 找不到 python 或 $T/skilllint.py（可用 PI_LAB_PYTHON 指定解释器）" >&2
+  exit 127
+fi
+exec "$PY" "$T/skilllint.py" "$@"

@@ -1,0 +1,989 @@
+#!/bin/bash
+# ─────────────────────────────────────────────────────────────────────────────
+# pi-lab 自检 —— 把「30 秒自检」从文档里的 6 条手敲命令变成一个命令
+#
+#   用法:  selfcheck           全套（含 11 条回归测试，并行）
+#          selfcheck --quick   跳过测试，只看环境/软链/黑板/仓库（约 9 秒；含 CTF 题型体检）
+#          selfcheck --serial  测试串行跑（调试单个用例时用）
+#
+# 存在理由：技能加载靠 `.pi/skills → ../skills` 软链，**断了零报错**；
+# 以前只能靠人去读 docs/状态快照.md 第 0 节对状态。现在失败会直接报红。
+#
+# 退出码：0 = 全部通过（警告不算失败）；1 = 有硬失败项
+# ─────────────────────────────────────────────────────────────────────────────
+set -uo pipefail
+
+QUICK=0
+SERIAL=0
+for a in "$@"; do
+  case "$a" in
+    --quick|-q) QUICK=1 ;;
+    --serial) SERIAL=1 ;;
+    -h|--help) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) echo "未知参数: $a（试 --help）" >&2; exit 1 ;;
+  esac
+done
+
+LAB="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$LAB" || exit 1
+
+# ★ 2026-11-07：必须 source labenv.sh。它把 tools/win/（宿主机的 gdb/nc/socat 垫片）
+#   和 venv 解释器接进 PATH。不 source 的后果：selfcheck 自己报「gdb 缺必需」——
+#   而 `bash tools/bin/py`、`fgs` 这些真正跑的入口**都能找到 gdb**（它们都 source 了）。
+#   就是说：不 source = 审计工具自己的眼睛比实际运行环境都窄，必然假红。
+if [ -f "$LAB/tools/libexec/labenv.sh" ]; then . "$LAB/tools/libexec/labenv.sh"; fi
+
+FAIL=0
+WARN=0
+if [ -t 1 ]; then
+  G=$'\033[32m'; R=$'\033[31m'; Y=$'\033[33m'; D=$'\033[2m'; B=$'\033[1m'; N=$'\033[0m'
+else
+  G=; R=; Y=; D=; B=; N=
+fi
+ok()   { printf '  %s✓%s %s\n' "$G" "$N" "$1"; }
+bad()  { printf '  %s✗%s %s\n' "$R" "$N" "$1"; FAIL=$((FAIL+1)); }
+warn() { printf '  %s!%s %s\n' "$Y" "$N" "$1"; WARN=$((WARN+1)); }
+hdr()  { printf '%s── %s ──%s\n' "$B" "$1" "$N"; }
+fix()  { printf '    %s↳ 修法: %s%s\n' "$D" "$1" "$N"; }
+
+printf '%s══ pi-lab selfcheck ══%s  %s\n' "$B" "$N" "$LAB"
+
+# ── 1. 技能是否真的会被 pi 加载 ────────────────────────────────────────────────
+hdr "1/9 技能加载"
+SRC_SKILLS=$(ls -d "$LAB/skills"/*/ 2>/dev/null | wc -l)
+# ★ 2026-10-30 发布包实测：技能软链的落点随部署形态而变 ——
+#   开发仓：      <lab>/.pi/skills → ../skills
+#   安装后/PiCTF：${PI_CODING_AGENT_DIR:-~/.pi-ctf/agent}/skills → <lab>/skills   （install.sh 与容器 entrypoint 都这么做）
+#   以前只认 <lab>/.pi/skills，于是容器里明明加载了 16 个 skill 却报红「技能不会加载」。
+SKILL_LINK=""
+for c in "$LAB/.pi/skills" "${PI_CODING_AGENT_DIR:-$HOME/.pi-ctf/agent}/skills"; do
+  [ -L "$c" ] && { SKILL_LINK="$c"; break; }
+done
+[ -z "$SKILL_LINK" ] && [ -d "${PI_CODING_AGENT_DIR:-$HOME/.pi-ctf/agent}/skills" ] && SKILL_LINK="${PI_CODING_AGENT_DIR:-$HOME/.pi-ctf/agent}/skills"
+if [ -n "$SKILL_LINK" ] && [ -L "$SKILL_LINK" ]; then
+  TARGET=$(readlink "$SKILL_LINK")
+  if [ -d "$SKILL_LINK" ]; then
+    LOADED=$(ls -d "$SKILL_LINK"/*/ 2>/dev/null | wc -l)
+    if [ "$LOADED" -ge 15 ]; then
+      ok "软链在（$TARGET），pi 可加载 $LOADED 个 skill"
+    else
+      bad "软链指向 ${TARGET}，但只解析出 $LOADED 个 skill（应 ≥15）"
+      fix "ls $SKILL_LINK —— 源头 skills/ 里少了目录？"
+    fi
+  else
+    bad "软链 ${TARGET} 是断的 → pi 一个 skill 都不加载（且无报错）"
+    fix "ln -sfn $LAB/skills $SKILL_LINK"
+  fi
+elif [ -n "$SKILL_LINK" ]; then
+  # 真目录（安装时拷过去而非软链）也算可用，但要提醒「源改了两边会不同步」
+  LOADED=$(ls -d "$SKILL_LINK"/*/ 2>/dev/null | wc -l)
+  if [ "$LOADED" -ge 15 ]; then
+    warn "$SKILL_LINK 是真目录不是软链（$LOADED 个 skill 可用；但改 $LAB/skills 不会同步过去）"
+    fix "rm -rf $SKILL_LINK && ln -sfn $LAB/skills $SKILL_LINK"
+  else
+    bad "$SKILL_LINK 只解析出 $LOADED 个 skill（应 ≥15）→ 技能加载不全"
+  fi
+else
+  bad "找不到技能软链（已查 $LAB/.pi/skills 与 ${PI_CODING_AGENT_DIR:-~/.pi-ctf/agent}/skills）→ 技能不会加载"
+  fix "ln -sfn $LAB/skills ${PI_CODING_AGENT_DIR:-$HOME/.pi-ctf/agent}/skills"
+fi
+# 技能库体检：断链在解题时最贵——按图索骥读不到，比没有更糟（会以为自己读过了）
+# 判据见 tools/TOOLS.md「skilllint」；硬失败才报警（超重只是告警）
+if [ -f "$LAB/tools/skilllint.py" ]; then
+  _sl_rc=0
+  _sl_py="$LAB/tools/venv/bin/python"
+  [ -x "$_sl_py" ] || _sl_py="$(command -v python3 || command -v python || true)"
+  timeout 90 "$_sl_py" "$LAB/tools/skilllint.py" --quiet >/dev/null 2>&1 || _sl_rc=$?
+  if [ "$_sl_rc" -eq 0 ]; then
+    ok "技能库体检通过（断链 0）"
+  else
+    warn "技能库有断链/坏 frontmatter（skilllint rc=$_sl_rc）"
+    fix "bash tools/bin/skilllint（不要只看结论行；rc=$_sl_rc 时把输出贴出来）"
+  fi
+fi
+# 与文档比（数据驱动）：文档写 16 就要求 16，别写死常量——这是「文档不许撒谎」的同一招
+N_DOC=$(grep -oE '[0-9]+ 个技能' "$LAB/docs/状态快照.md" 2>/dev/null | head -1 | grep -oE '^[0-9]+')
+if [ -n "$N_DOC" ] && [ "$SRC_SKILLS" -ne "$N_DOC" ]; then
+  warn "skills/ 下现有 $SRC_SKILLS 个目录，但文档写 $N_DOC → 两边同步（AGENTS.md / README / 快照）"
+elif [ -z "$N_DOC" ]; then
+  warn "状态快照里找不到「N 个技能」—— 技能数一致性检查暂时失效"
+fi
+
+# ── 2. 插件崩溃记录 ───────────────────────────────────────────────────────────
+hdr "2/9 插件运行"
+CRASH="$LAB/.pi/agent/crashes.json"
+if [ -f "$CRASH" ]; then
+  N_CRASH=$(python3 - "$CRASH" <<'PY' 2>/dev/null || echo "?"
+import json,sys
+try: print(len(json.load(open(sys.argv[1],encoding='utf-8'))))
+except Exception: print("?")
+PY
+)
+  [ "$N_CRASH" = "0" ] && ok "崩溃记录 0 条" || warn "崩溃记录 $N_CRASH 条（看 $CRASH）"
+else
+  ok "无崩溃记录文件"
+fi
+# ★ 2026-11-07：容器里 pi 的配置目录**不是** $LAB/.pi/agent，而是
+#   $PI_CODING_AGENT_DIR（entrypoint 设成 /home/ctf/.pi-ctf/agent，且是个持久卷）。
+#   原来只认仓库相对路径 → 容器内 5 个扩展全报"缺失"、派活闸门报"ts=无"，
+#   而它们其实都在卷里（实测 19 个 .ts）。这类"路径猜错"的假红会掩盖真红。
+#   取法：PI_CODING_AGENT_DIR 优先，回退仓库内 .pi/agent（宿主机/WSL 的布局）。
+#   ★ 2026-11-07 再补一层：宿主机上运行时目录 ~/.pi/agent/extensions 是**空的**
+#     （扩展由 docker/entrypoint.sh 从 agent-template/ 同步进容器，宿主不跑同步）。
+#     只看运行时目录 → 宿主上 5 个扩展全"缺失"，而真源 agent-template/extensions/
+#     里 19 个文件齐着。判定顺序：显式 env → $HOME/.pi/agent → 仓库 .pi/agent →
+#     **agent-template（真源兜底）**，取第一个真有 .ts 的。
+EXT_DIR=""
+for _cand in "${PI_CODING_AGENT_DIR:-}" "$HOME/.pi/agent" "$LAB/.pi/agent"; do
+  [ -n "$_cand" ] || continue
+  if [ -n "$(ls "$_cand/extensions"/*.ts 2>/dev/null | head -1)" ]; then
+    EXT_DIR="$_cand/extensions"; break
+  fi
+done
+if [ -z "$EXT_DIR" ]; then
+  EXT_DIR="$LAB/agent-template/extensions"
+fi
+N_EXT=$(ls "$EXT_DIR"/*.ts 2>/dev/null | wc -l)
+# 清单是"该在的都在"——漏掉哪个都是静默故障（preflight 不跑/flag-watch 不报都不报错）
+for e in think-clock ocgo-switch deepseek-flash-godmode lab-preflight flag-watch; do
+  [ -f "$EXT_DIR/$e.ts" ] || warn "扩展缺失: $e.ts"
+done
+if [ "$N_EXT" -ge 5 ]; then ok "扩展文件 $N_EXT 个（含 lab-preflight / flag-watch）"
+else warn "扩展只有 $N_EXT 个（应 ≥5）—— 对一下 .pi/agent/extensions/"; fi
+# pi 界面文案补丁：改的是 npm 包里的 dist 文件 —— 每次 `npm i -g` 升级都会被冲掉。
+# 这类「升级即静默失效」必须机器盯着（人不会记得重打补丁）；见 tools/TOOLS.md「pi 界面」
+if command -v pi >/dev/null 2>&1 && [ -f "$LAB/tools/pi-ui-patch.sh" ]; then
+  if bash "$LAB/tools/pi-ui-patch.sh" --check >/dev/null 2>&1; then
+    ok "pi 界面文案补丁在（底部胶囊已精简）"
+  else
+    warn "pi 界面文案补丁被冲掉（升级 pi 后常见）"
+    fix "bash tools/pi-ui-patch.sh，然后新开一个 pi"
+  fi
+fi
+# npm 扩展包是不是被放在了慢盘（D: 小文件读 5 MB/s）——同一份代码实测启动差 6 倍：
+#   D: 79.7s vs ext4 12.6s；全量发现 110s vs 7.5s（口径见 tools/pi-bench.py）
+# 判据是「这个目录还是不是软链」：正常状态是软链指向 /root/pi-lab-npm
+if [ -d "$LAB/.pi/agent/npm" ] && [ ! -L "$LAB/.pi/agent/npm" ]; then
+  warn "npm 扩展包是真实目录（没软链到快盘）→ 启动可能慢 ~6 倍"
+  fix "见 tools/TOOLS.md「pi 界面」节：把 .pi/agent/npm 挪到 ext4 再软链回来"
+fi
+# webUI 产物一致性：index.html 引用的那个 JS 必须真在 dist 里 —— 只查 index.html 存在是假绿灯。
+# 实测踩过两次：① dist 被 emptyOutDir 清空后静态资源静默 404；② 宿主改了 src 但没重建，
+#   index.html 指向的 hash 文件根本不存在 → 打开是白屏，而"dist/index.html 存在"这条永远绿。
+UI_WEB="$LAB/work/ui/web"
+if [ -f "$UI_WEB/dist/index.html" ]; then
+  _ref=$(grep -o 'assets/[A-Za-z0-9._-]*\.js' "$UI_WEB/dist/index.html" 2>/dev/null | head -1)
+  if [ -n "$_ref" ] && [ -f "$UI_WEB/dist/$_ref" ]; then
+    ok "webUI 产物自洽（$_ref）"
+  elif [ -z "$_ref" ]; then
+    warn "webUI 的 dist/index.html 里找不到 JS 入口——构建可能没跑或产物被截断"
+    fix "uibuild（tools/hand/uibuild：容器内 tsc+vite → 校验 → 回填宿主 dist）"
+  else
+    bad "webUI 产物不自洽：index.html 指向 $_ref，但该文件不存在（打开必白屏）"
+    fix "重建前端：uibuild（容器内构建 → 校验 → 回填宿主 dist）"
+  fi
+  if [ -d "$UI_WEB/public" ] && [ ! -f "$UI_WEB/dist/pictf.ico" ]; then
+    warn "webUI 静态资源丢了（dist/pictf.ico 不在）—— 图标/字体会 404"
+    fix "静态资源必须在 web/public/（vite 的 emptyOutDir 会清空 dist）"
+  fi
+else
+  warn "webUI 产物缺失（work/ui/web/dist/index.html 不在）→ 30142 打开是 404"
+fi
+
+# ── webUI 的 dist 存在**三份**，容器重建时会悄悄换版本（★ 2026-11-18 加）─────────
+#   compose.yaml 明写「只挂源码，不挂 dist」，dist 由容器内 build.sh 直接写
+#   /opt/pi-ctf/work/ui/web/dist（落在容器的**可写层**）。于是同一时刻有三份：
+#     ① 宿主工作树  —— 入库、可 diff、是「应该长什么样」的真相
+#     ② 镜像层      —— 建镜像那一刻 COPY . 的快照，之后不再更新
+#     ③ 容器可写层  —— docker exec 重建时写入，跑着的就是它
+#   实测（2026-11-18）：镜像还是 11-13 建的，层里躺着一份**带已删口令闸门**的老
+#   bundle（grep 命中「口令」与 /api/auth）；而容器可写层与宿主都是新 bundle（命中 0）。
+#   ⇒ 只要 docker compose up --force-recreate（**不 build**）就会退回那份老前端：
+#     页面不会白屏，但口令框又回来了 —— 静默、无声、只有肉眼能发现。
+#   这条闸门量的是「跑着的」和「该跑的」是不是同一份；不一致就点名，不假装一致。
+if [ -f "$UI_WEB/dist/index.html" ] && command -v docker >/dev/null 2>&1 \
+   && docker inspect -f '{{.State.Running}}' pictf 2>/dev/null | grep -q true; then
+  _hjs=$(grep -o 'assets/[A-Za-z0-9._-]*\.js' "$UI_WEB/dist/index.html" 2>/dev/null | head -1)
+  if [ -n "$_hjs" ] && [ -f "$UI_WEB/dist/$_hjs" ]; then
+    _hm=$(md5sum "$UI_WEB/dist/$_hjs" 2>/dev/null | awk '{print $1}')
+    # ★ 必须走 bash -c：MSYS 的环境前缀 MSYS_NO_PATHCONV=1 挡不住 docker exec 的
+    #   参数改写（实测仍是 D:\deepseek\...\opt\pi-ctf\...），包一层 bash -c 才稳。
+    _cm=$(docker exec pictf bash -c "md5sum /opt/pi-ctf/work/ui/web/dist/$_hjs 2>/dev/null" | awk '{print $1}')
+    # ★ 2026-11-18 起 compose 把 dist **只读挂**进来，所以「不一致」只可能是容器
+    #   还没按新 compose 重建（旧容器用的是自己可写层里那份）—— 修法是重建容器，
+    #   不再是 docker cp（往只读挂载里 cp 必失败）。用 rw 与否再细分一次。
+    _ro=$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/opt/pi-ctf/work/ui/web/dist"}}{{.RW}}{{end}}{{end}}' pictf 2>/dev/null)
+    if [ -z "$_cm" ]; then
+      bad "容器里根本没有 $_hjs —— 30142 打开会白屏（宿主 dist 与容器 dist 不是同一份）"
+      fix "docker compose up -d --force-recreate pictf（让 dist 的只读挂载生效）"
+    elif [ "$_hm" = "$_cm" ]; then
+      if [ "$_ro" = "false" ]; then
+        ok "容器内 dist 与宿主一致（$_hjs，只读挂载生效）"
+      else
+        ok "容器内 dist 与宿主一致（$_hjs）"
+        warn "但 dist 不是只读挂载（容器没按新 compose 重建）—— 镜像层旧 bundle 仍有复活机会"
+        fix "docker compose up -d --force-recreate pictf"
+      fi
+    else
+      warn "容器内 dist 与宿主**不是同一份**（md5 不同）—— 跑着的是旧前端"
+      fix "docker compose up -d --force-recreate pictf（旧容器用的是自己可写层那份）"
+    fi
+  fi
+fi
+# webUI 的 dist 会不会「比源码旧」（★ 2026-11-18 加）─────────────────────────────
+#   上面两条只量「dist 自洽」和「容器跑的是不是宿主那份」，都没量「宿主 dist 是不是
+#   由**当前** src 构建的」。实测踩点：改了 src/*.tsx 却没跑 build.sh，dist 里的 hash
+#   文件名不变、内容却是旧的 —— 页面看着正常，行为却是上一版（比白屏更难发现）。
+#   判据只看时间戳：dist/index.html 的 mtime 之后，src/ 或构建输入还有没有更新的文件。
+#   用 mtime 而不是内容哈希，是因为「改了又改回来」不该报警；容差 2s 挡掉 checkout 抖动。
+if [ -f "$UI_WEB/dist/index.html" ]; then
+  _dts=$(stat -c %Y "$UI_WEB/dist/index.html" 2>/dev/null)
+  if [ -n "$_dts" ]; then
+    _stale=""
+    # ★ 取绝对路径：`< <(cd DIR && find .)` 只会把 cd 放进那个子 shell，而 while 的
+    #   循环体跑在**父 shell**（cwd 仍是仓库根）→ 相对路径 stat 全失败，闸门永远绿。
+    #   实测踩过：探针文件造出来也不报警，正是这个原因。
+    while IFS= read -r _f; do
+      [ -n "$_f" ] || continue
+      _ts=$(stat -c %Y "$_f" 2>/dev/null) || continue
+      if [ "$_ts" -gt $((_dts + 2)) ]; then
+        _stale="$_stale $(printf '%s' "$_f" | sed 's|.*/web/||')"
+      fi
+    done < <(find "$UI_WEB/src" "$UI_WEB/index.html" "$UI_WEB/package.json" "$UI_WEB/vite.config.ts" -type f 2>/dev/null)
+    if [ -z "$_stale" ]; then
+      ok "webUI 的 dist 不落后于源码"
+    else
+      warn "webUI 的 dist **比源码旧**（改了前端没重建）→ 页面跑的还是上一版:$_stale"
+      fix "重建并回填：uibuild（一条命令；**要求容器在跑**，它的 src 是宿主只读挂载）"
+    fi
+  fi
+fi
+# ── 3. 黑板不变量 ─────────────────────────────────────────────────────────────
+hdr "3/9 黑板（FGS）"
+command -v fgs >/dev/null 2>&1 || export PATH="$LAB/tools/bin:$PATH"
+if ! command -v fgs >/dev/null 2>&1; then
+  bad "fgs 不在 PATH"
+  fix "export PATH=\"$LAB/tools/bin:\$PATH\""
+else
+  PROJS=$(ls "$LAB"/board/projects/*/graph.json 2>/dev/null | wc -l)
+  BAD_P=""
+  for p in $(ls "$LAB"/board/projects/*/graph.json 2>/dev/null | xargs -r -n1 dirname | xargs -r -n1 basename); do
+    if ! fgs doctor "$p" >/dev/null 2>&1; then BAD_P="$BAD_P $p"; fi
+  done
+  # 只有目录没有 graph.json = 测试残留或手工建了一半，单独提醒（不当作 doctor 失败）
+  for d in $(ls -d "$LAB"/board/projects/*/ 2>/dev/null); do
+    [ -f "$d/graph.json" ] || warn "board/projects/$(basename "$d")/ 没有 graph.json（测试残留？）"
+  done
+  if [ -z "$BAD_P" ]; then
+    ok "doctor 全绿（$PROJS 个 project）"
+  else
+    bad "doctor 未通过:$BAD_P"
+    fix "fgs doctor <pid> 看具体哪条不变量破了"
+  fi
+  [ -n "${PI_LAB_BOARD_DIR:-}" ] && ok "黑板目录被 PI_LAB_BOARD_DIR 指到 $PI_LAB_BOARD_DIR（drvfs 外可用 flock）"
+fi
+
+# ── 4. 回归测试 ───────────────────────────────────────────────────────────────
+hdr "4/9 回归测试"
+if [ "$QUICK" = "1" ]; then
+  warn "已用 --quick 跳过（发布前请跑全套）"
+else
+  # 并行跑：每个测试文件都用自己的 pid / 临时目录，互不干扰（PID 常量不同）。
+  # 串行总计约 7 分钟，瓶颈是 matrix_fuzz（444 条断言、上百次 fgs 子进程）。
+  # ★ 2026-11-17 修（实测假红 120/120）：Windows 的 python3 不认 MSYS 的 /d/baoan/... 绝对路径，
+  #   会把它当成「当前盘根下的 d/baoan/...」→ 120 个测试全 FileNotFoundError（rc=2）。
+  #   改为在 $LAB 里用**相对路径**（与手跑 work/rt.sh 同一口径）。
+  T_FILES=$(cd "$LAB" && ls board/tests/test_*.py)
+  T_N=$(printf '%s\n' "$T_FILES" | wc -l)
+  JOBS=${PI_LAB_TEST_JOBS:-$(nproc 2>/dev/null || echo 2)}
+  [ "$JOBS" -gt 4 ] && JOBS=4
+  [ "$SERIAL" = "1" ] && JOBS=1
+  TMPD=$(mktemp -d)
+  T0=$(date +%s)
+  # ★ 2026-11-17 修：这里原来裸写 `timeout 900 python3`，有两个坑（都实测踩到）：
+  #   ① `python3` 是 PATH 里的第一个同名——labenv 曾把 Linux venv 的断链 bin 前置，
+  #      命中就 exec 失败 rc=126、log 0 字节 → 120 个测试全假红（见 labenv.sh 同处注释）；
+  #   ② 子进程没有 PYTHONIOENCODING，Windows 控制台默认 cp936 → 测试里比对 utf-8 中文
+  #      输出的断言被解码成乱码而假红（test_llmrec_calls 曾因此 6 条假红）。
+  #   现在：解释器用 labenv 解析好的 $PY3（与 py 包装同源），并给子进程钉死 UTF-8。
+  T_PY="${PI_LAB_PYTHON:-${PY3:-python3}}"
+  printf '%s\n' "$T_FILES" | xargs -P "$JOBS" -I{} sh -c '
+      cd "$1" || exit 99
+      b=$(basename "{}")
+      PYTHONIOENCODING=utf-8 PYTHONUTF8=1 timeout 900 "$2" "{}" >"$0/$b.log" 2>&1; rc=$?
+      printf "%s" "$rc" >"$0/$b.rc"     # 0=通过 77=显式SKIP 其它=失败
+  ' "$TMPD" "$LAB" "$T_PY"
+  T1=$(date +%s)
+  # ★ 2026-11-17：失败现场默认只留 log（0 字节的 log 说明连 python 都没起来）。
+  #   查「全绿代码却 120 全红」这类假红时，需要看到每个 rc 与原始 stderr ——
+  #   PI_LAB_SELFCHECK_KEEP=1 时保留 TMPD 并把失败文件的 rc 打出来。
+  if [ -n "${PI_LAB_SELFCHECK_KEEP:-}" ]; then
+    echo "  · TMPD=$TMPD（PI_LAB_SELFCHECK_KEEP=1，未删除）"
+  fi
+  T_FAIL=""
+  T_SKIP=""
+  for t in $T_FILES; do
+    b=$(basename "$t")
+    rc=$(cat "$TMPD/$b.rc" 2>/dev/null)
+    case "$rc" in
+      0)  : ;;
+      77) T_SKIP="$T_SKIP $b" ;;   # ★ 77 = 显式跳过（产物不在发布包里，不是缺陷）
+      *)  T_FAIL="$T_FAIL $b" ;;
+    esac
+  done
+  [ -n "$T_SKIP" ] && warn "按发布包形态跳过:$T_SKIP（对应产物不在包里，见各 SKIP 行）"
+  # ★ 2026-11-17 修：原来写成 $(( T_N - $(printf ... | wc -w) ))，在 Git-Bash 的
+  #   bash 5.3.20 上**不会求值**——结果原样打印成字符串 `$((T_N - 7))`（实测复现：
+  #   `bash -c 'T=120; echo $((T - $(echo 7)))'` → `$((T - 7))`）。于是自检天天报
+  #   「$((T_N - 7))/120 条全绿」，看起来像通过，实际是通过数根本没算。
+  #   先落变量再算，别在 $(( )) 里套 $( )。
+  T_SKIP_N=$(printf '%s' "$T_SKIP" | wc -w)
+  T_FAIL_N=$(printf '%s' "$T_FAIL" | wc -w)
+  T_PASS=$((T_N - T_FAIL_N - T_SKIP_N))
+  if [ -z "$T_FAIL" ]; then
+    ok "$T_PASS/$T_N 条测试文件全绿（跳过 $T_SKIP_N 条；并行 $JOBS 路，$((T1-T0))s）"
+  else
+    bad "失败:$T_FAIL"
+    # ★ 失败日志必须**留证据**：以前只打印 $TMPD 路径，而下面 rm -rf 立刻把它删了
+    #   → 偶发失败的现场永远抓不到（实测踩过一次：只看到"✗ 1 项失败"，日志已被销毁，
+    #     复跑 5 次无法重现，白查一轮）。现在失败即落盘到 log/selfcheck-fail/。
+    KEEP="$LAB/log/selfcheck-fail"
+    mkdir -p "$KEEP"
+    STAMP=$(date +%Y%m%d-%H%M%S)
+    for f in $T_FAIL; do
+      cp "$TMPD/$f.log" "$KEEP/$STAMP-$f.log" 2>/dev/null || true
+    done
+    for f in $T_FAIL; do printf '    %s↳ 现场已留档：%s%s\n' "$D" "$KEEP/$STAMP-$f.log" "$N"; done
+    fix "python3 board/tests/<失败文件> 看断言；留档目录 log/selfcheck-fail/"
+  fi
+  [ -n "${PI_LAB_SELFCHECK_KEEP:-}" ] || rm -rf "$TMPD"
+
+  # 4a) 宿主恒跳过的那几条，**容器里补跑**（★ 2026-11-18 加）
+  #   背景：这 7 条（保活/sweep/模型切换/记忆闸门/感知/自检测试/agent 同步）都因
+  #   「宿主不是 POSIX / 没有 rsync / 不能 exec shebang 脚本」而显式 SKIP(77)。
+  #   问题不是跳过本身，而是**跳过被长期当成通过**：它们在容器里全都跑得通
+  #   （2026-11-18 实测 7/7 rc=0，合计约 90s），却从来没有一次回归。
+  #   现在：容器在 → 真跑一遍并报结果；容器不在 → 维持原来的 warn，不假装跑过。
+  if [ -n "$T_SKIP" ]; then
+    _CTR_UP=0
+    if command -v docker >/dev/null 2>&1 \
+       && docker inspect -f '{{.State.Running}}' pictf 2>/dev/null | grep -q true; then
+      _CTR_UP=1
+    fi
+    if [ "$_CTR_UP" = "1" ]; then
+      C_OK=""; C_BAD=""; C_T0=$(date +%s)
+      for _b in $T_SKIP; do
+        _rb=$(basename "$_b" .py)
+        _log=$(MSYS_NO_PATHCONV=1 docker exec pictf bash -c \
+          'cd /opt/pi-ctf || exit 99; d=$(mktemp -d); timeout 600 python3 "board/tests/$1" >"$d/o" 2>&1; rc=$?; tail -1 "$d/o"; exit $rc' \
+          _ "$_rb.py" 2>&1)
+        if [ $? -eq 0 ]; then C_OK="$C_OK $_rb"; else C_BAD="$C_BAD $_rb"; fi
+      done
+      C_T1=$(date +%s)
+      if [ -z "$C_BAD" ]; then
+        ok "宿主跳过的 $(printf '%s' "$T_SKIP" | wc -w) 条已在**容器内**跑通（补回归，$((C_T1-C_T0))s）"
+      else
+        bad "容器内补跑失败:$C_BAD"
+        fix "docker exec pictf bash -c 'cd /opt/pi-ctf && python3 board/tests/<失败文件>' 看断言"
+      fi
+    else
+      warn "宿主跳过的这几条没有**容器补跑**（pictf 没在跑）—— 它们本轮无回归"
+      fix "docker compose up -d pictf，再跑 selfcheck（会自动进容器补跑那几条）"
+    fi
+  fi
+fi
+
+# 4b) 文档不许撒谎：状态快照里写的测试数必须等于现场
+#     （交接包/文档以前写「588 条断言」就是这么飘掉的；机器能比的事别靠人记得改）
+  # 容错：文档里写成 **27** 条全绿（加粗）也算 —— 之前加粗一次就“检查失效”，闸门不该这么脆
+  T_N_DOC=$(grep -oE '\*{0,2}[0-9]+\*{0,2} 条全绿' "$LAB/docs/状态快照.md" 2>/dev/null | head -1 | grep -oE '[0-9]+')
+  T_N_LIVE=$(ls "$LAB"/board/tests/test_*.py | wc -l)
+  # 4c) 常驻提示词预算：AGENTS.md 每轮都进上下文，只该放“规则”，故事/考据往外挪
+  #     （2026-10-05：从 27636 溢到 21449 字节后加闸门，防再长回去）
+  # 2026-10-06 收紧：当天从 17301 一路加到 20473（+18%，全是我自己的"教训"）
+  #   → 软/硬各下调 3500，逼自己在超预算时"先删再加"
+  AG_BUDGET_SOFT=18500   # 超过提醒
+  AG_BUDGET_HARD=21000   # 超过硬红（≈7000 tokens/轮）
+  AG_F="$LAB/AGENTS.md"
+  if [ -f "$AG_F" ]; then
+    AG_B=$(wc -c < "$AG_F" | tr -d ' ')
+    if [ "$AG_B" -gt "$AG_BUDGET_HARD" ]; then
+      bad "常驻提示词臃肿：AGENTS.md $AG_B 字节 > 硬上限 $AG_BUDGET_HARD（≈$((AG_B/3)) tokens/轮）"
+      fix "把故事/考据/历史搬到 docs/经验-*.md，AGENTS.md 只留规则；然后重跑 selfcheck"
+    elif [ "$AG_B" -gt "$AG_BUDGET_SOFT" ]; then
+      warn "常驻提示词偏胖：AGENTS.md $AG_B 字节 > 软上限 $AG_BUDGET_SOFT —— 该瘦身（规则留、故事外移）"
+    else
+      ok "常驻提示词预算 OK（AGENTS.md $AG_B 字节 ≤ $AG_BUDGET_SOFT，≈$((AG_B/3)) tokens/轮）"
+    fi
+  else
+    warn "找不到 AGENTS.md —— 预算检查失效"
+  fi
+  if [ -z "$T_N_DOC" ]; then
+    warn "状态快照 §0 里找不到「N 条全绿」—— 文档格式变了，4b 检查暂时失效"
+  elif [ "$T_N_DOC" = "$T_N_LIVE" ]; then
+    ok "文档与现场一致（都写 $T_N_DOC 条测试）"
+  else
+    bad "文档写 $T_N_DOC 条测试，现场是 $T_N_LIVE 条"
+    # ★ 2026-11-07：不再要求"人手改两处文档"（那正是假红的来源）。
+    #   数字只有一个可写点，由 tools/testcount.py 机器算（两处锚点一起改 + 写完复读）。
+    fix "跑 `python3 tools/testcount.py --sync`（自动把文档两处锚点改成现场值）"
+  fi
+
+# ── 5. 版本控制 ───────────────────────────────────────────────────────────────
+# ★ 2026-11-07（决策 D1=B）：宿主机缺的工具**不等于能力缺失**。
+#   实测：wabt / foremost / rsync 在宿主机没有，容器里全都有且更完整。
+#   重活本来就跑在容器里（AGENTS.md「部署只在 Windows 宿主 + pictf 容器」），
+#   在宿主重复装一份 = 两套维护成本 + 版本漂移，还会误导「这条警告要不要修」。
+#   所以判据改成**两级**：宿主没有 → 再问容器；容器有 → 能力达标，只标注不告警。
+#   容器不可用（没起/没装 docker）时才降级成原来的宿主单级判定。
+_CTR_TOOLS=""        # 容器内可用命令的缓存（空格分隔），空串=容器不可用
+_CTR_PROBED=0
+# 探测容器内有哪些命令。
+# ★ 别用 `for x in ...; do command -v \$x` —— 那层单引号里的 \$ 转义极易写错
+#   （第一版就错了：容器收到字面量 \$x，command -v 永远失败，于是"容器有能力"
+#    这条分支静默不走，警告照旧）。改用 `command -v` 的多参数形式：
+#   它会为每个找到的名字打印路径、找不到的只往 stderr 报，天然不用循环。
+_ctr_probe() {
+  [ "$_CTR_PROBED" = 1 ] && { [ -n "$_CTR_TOOLS" ]; return; }
+  _CTR_PROBED=1
+  command -v docker >/dev/null 2>&1 || return 1
+  docker inspect -f '{{.State.Running}}' pictf 2>/dev/null | grep -q true || return 1
+  # ★ 必须 bash -lc，不能 sh -c：Ubuntu 的 sh 是 dash，而 dash 的 `command -v a b c`
+  #   只认**第一个**参数（实测 dash 只吐 gdb，bash 吐出全部三个）—— 用 sh 会让
+  #   「容器里有」系统性漏判，这条改动等于白做。
+  _CTR_TOOLS="$(MSYS_NO_PATHCONV=1 docker exec pictf bash -lc     'command -v gdb objdump readelf nc socat qemu-aarch64 file strings r2 radare2 pycdc pycdas pyinstxtractor upx python3 openssl sage hashcat john unzip binwalk foremost exiftool zsteg steghide tesseract 7z vol tshark sqlmap ffuf nuclei nmap curl wat2wasm wasm2wat wasm-decompile wasm-objdump poc pocbomber httpx'     2>/dev/null | sed 's#.*/##' | tr '\n' ' ')"
+  [ -n "$_CTR_TOOLS" ]
+}
+_in_ctr() { case " $_CTR_TOOLS " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
+
+hdr "5/9 版本控制"
+if git -C "$LAB" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  GIT_ST=$(git -C "$LAB" -c core.quotePath=false status --porcelain 2>/dev/null)   # ★ 只调一次：drvfs 上一次 ~7s
+  DIRTY=$(printf '%s' "$GIT_ST" | grep -c . || true)
+  TRACKED=$(git -C "$LAB" ls-files | wc -l)
+  if [ "$DIRTY" -eq 0 ]; then
+    ok "工作区干净（跟踪 $TRACKED 文件，HEAD $(git -C "$LAB" log -1 --format=%h 2>/dev/null || echo 无提交)）"
+  else
+    if [ "$QUICK" = "1" ]; then warn "$DIRTY 处未提交改动（--quick 只统计**已跟踪**文件；全套模式含未跟踪）"
+    else warn "$DIRTY 处未提交改动（改完 board/ 或 skills/ 建议立刻 commit）"; fi
+    [ "$DIRTY" -le 8 ] && printf '%s\n' "$GIT_ST" | sed 's/^/      /'
+  fi
+elif [ -f "$LAB/.gitignore" ]; then
+  # ★ 2026-10-30：PiCTF 交付包是**打包产物**，本来就不带 .git（买家拿到的是 tar/zip）。
+  #   以前这里判 bad，导致交付包自检永远红。改成 warn：说清代价（无法 diff/回滚），
+  #   并静态核对 .gitignore 仍挡住了该挡的东西（这才是真风险点）。
+  # ★ 2026-11-04：再降一级 —— **容器内必然没有 .git**（.dockerignore 第 9 行排除，
+  #   否则镜像白胖几十 MB）。在容器里报「非 git 仓库」是**环境事实、不是缺陷**：
+  #   它天天红，红到没人看，反而把真正的告警（交付包形态）淹掉。
+  #   判定：/.dockerenv 存在 或 PI_LAB_ROOT=/opt/pi-ctf → 降为不计数的一行提示。
+  if [ -f /.dockerenv ] || [ "${PI_LAB_ROOT:-}" = "/opt/pi-ctf" ]; then
+    printf '  %s·%s 容器内无 .git（.dockerignore 排除，属正常）→ 版本控制看宿主仓库%s\n' "$D" "$N" "$N"
+  else
+    warn "非 git 仓库（交付包形态）→ 编辑事故无法 diff / 回滚"
+    fix "要版本控制就 git init -b main && git add -A && git commit（.gitignore 已备）"
+  fi
+  GI_MISS=""
+  for pat in .env auth.json .pi-ctf sessions "tools/venv" "workspace"; do
+    grep -qF "$pat" "$LAB/.gitignore" || GI_MISS="$GI_MISS $pat"
+  done
+  if [ -z "$GI_MISS" ]; then ok ".gitignore 已挡住 .env/auth.json/sessions/venv/workspace"
+  else warn ".gitignore 未覆盖：$GI_MISS → 一旦 git init 会把这些提交进去"; fi
+else
+  bad "既不是 git 仓库也没有 .gitignore → 一旦初始化就会把 .env / 会话提交进去"
+  fix "编写 .gitignore（至少 .env / auth.json / sessions/ / tools/venv/ / workspace/）"
+fi
+
+# ★ 2026-11-17 加（实测踩到）：`tools/hand/*` 是正本、`tools/bin/*` 是它的入口。
+#   make-bin.sh 现在按 `git config core.symlinks` 分流：能信软链就 ln -sf（Linux/容器），
+#   否则 cp 成**独立副本**（本机 Windows，实测 ln -s 出来的是真软链但 git 存成 120000，
+#   换台没开开发者模式的机器 checkout 就变成「内容是 ../hand/xxx 的普通文件」→ 入口全废）。
+#   副本模式的代价：改了 bin/ 不改 hand/，下次 make-bin 就被 hand/ 的旧内容静默盖回来。
+#   实测：selfcheck 的 4 处假红修复全在 bin/ 里，hand/ 还停在 11-07 的旧版，修好的东西无声消失。
+#   判据就一条：内容必须 byte-equal，不等就点名（改哪边由人决定，这里只负责别让它悄悄漂）。
+# ★★ 2026-11-24：清单**从文件读**，不再在这里硬编码。
+#   原先 make-bin.sh / hand/selfcheck / bin/selfcheck 各有**一份** HAND_TOOLS，
+#   加工具时三处都得改 —— 历史真漏过（加了工具但 selfcheck 不查它，
+#   byte-equal 检查形同虚设，而所有检查都是绿的）。
+#   现在唯一可写点是 make-bin.sh 的 HAND_TOOLS，它落盘到 tools/hand/.hand-tools，
+#   本脚本读那个文件。文件不在 → 明确 warn 并跳过（不假装查过）。
+_HAND_MANIFEST="$LAB/tools/hand/.hand-tools"
+if [ -f "$_HAND_MANIFEST" ]; then
+  HAND_TOOLS="$(grep -v '^#' "$_HAND_MANIFEST" | tr '\n' ' ')"
+else
+  HAND_TOOLS=""
+fi
+if [ -z "$(echo $HAND_TOOLS)" ]; then
+  warn "缺 tools/hand/.hand-tools（人手写入口清单）→ 跑 bash tools/make-bin.sh 生成"
+  HAND_TOOLS=""
+fi
+DRIFT=""
+for n in $HAND_TOOLS; do
+  [ -f "$LAB/tools/bin/$n" ] && [ -f "$LAB/tools/hand/$n" ] || continue
+  cmp -s "$LAB/tools/bin/$n" "$LAB/tools/hand/$n" || DRIFT="$DRIFT $n"
+done
+if [ -z "$(echo $HAND_TOOLS)" ]; then
+  # ★ 2026-11-24：清单缺失时**不许打绿**。实测它原来会输出
+  #   "✓ 正本一致（0 个人手写入口）" —— 零项检查当然"一致"，
+  #   而那正是「检查器自己站不稳」的经典形态（§4c）。
+  fail "bin/hand 一致性检查被跳过（清单不在）→ 跑 bash tools/make-bin.sh"
+elif [ -z "$DRIFT" ]; then
+  ok "tools/bin 与 tools/hand 正本一致（$(echo $HAND_TOOLS | wc -w) 个人手写入口）"
+else
+  warn "tools/bin 与 tools/hand 漂了：$DRIFT → 下次 make-bin 会盖回旧内容"
+  fix "先把改动合到 tools/hand/<名字>（正本），再 bash tools/make-bin.sh 重建 bin/"
+fi
+# ── tools/bin 里的入口必须能被 exec（★ 2026-11-19 血账）────────────────────
+# 事故：quiet / thinkcheck / mswitch / kimi-token / nccsec-token / opencode-token
+#   六个人手写入口直接是 `#!/usr/bin/env python3` 的裸 Python 脚本。它们在**容器里**
+#   敲得出来，在**宿主 Windows** 上必炸：MSYS/Git-Bash 的 exec 层不解析脚本 shebang，
+#   凡是非 MSYS 原生（即原生 PE）的解释器一律退化成「用 shell 解释整个文件」→
+#   `syntax error near unexpected token` 或 `command not found`。实测 `#!/usr/bin/env bash`
+#   能过、`#!/usr/bin/env node` 不能过 —— 判据是**解释器是不是 MSYS 原生**，不是语言。
+#   修法：Python 实现放 tools/<name>.py，由 make-bin.sh 生成 `#!/bin/bash` + `exec "$PY"` 的壳。
+#   这条守门把「又有人把裸 Python 脚本直接丢进 bin/」挡在提交前。
+_exec_bad=""
+for _f in "$LAB"/tools/bin/* "$LAB"/tools/hand/*; do
+  [ -f "$_f" ] || continue
+  # tr -d 为空字节：bin/ 里有 ELF 二进制（rg/fd/jsteg…），直接赋值给变量会让 bash 报
+  #   "ignored null byte in input" 刷屏。二进制的首行本来就是乱码，清掉空字节再取首行即可。
+  _h=$(head -c 200 "$_f" 2>/dev/null | tr -d "\000" | head -n1)
+  case "$_h" in
+    "#!"*) ;;
+    *) continue ;;   # 无 shebang（ELF 二进制）或空文件，不归这条管
+  esac
+  case "$_h" in
+    *bash*|*"/bin/sh"*) continue ;;
+  esac
+  _exec_bad="$_exec_bad $(basename "$_f")"
+done
+if [ -z "$_exec_bad" ]; then
+  ok "tools/bin 与 tools/hand 的入口都能被 exec（没有裸非 bash 脚本）"
+else
+  bad "这些入口在宿主 Windows 上敲不出来（shebang 不是 bash）：$_exec_bad"
+  fix "把 Python 实现移到 tools/<name>.py，在 tools/make-bin.sh 的 self_tools 里登记，重跑 make-bin.sh"
+fi
+# ── 6. 机密是否混进版本库 ─────────────────────────────────────────────────────
+hdr "6/9 机密泄漏"
+if git -C "$LAB" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  # --quick：只扫高风险目录（drvfs 上全库 grep 约 6s）；全套模式扫全库
+  if [ "$QUICK" = "1" ]; then SCAN_PATHS="-- .pi tools skills docs board"; else SCAN_PATHS="-- ."; fi
+  LEAK=$(git -C "$LAB" grep -lI -E 'sk-[A-Za-z0-9]{16,}|apiKey"[[:space:]]*:[[:space:]]*"[A-Za-z0-9_-]{12,}|BEGIN (RSA|OPENSSH|EC) PRIVATE KEY' $SCAN_PATHS 2>/dev/null)
+  if [ -z "$LEAK" ]; then
+    if [ "$QUICK" = "1" ]; then ok "跟踪文件里没有 apiKey / 私钥特征（--quick 只扫 .pi/tools/skills/docs/board）"
+    else ok "跟踪文件里没有 apiKey / 私钥特征（全库）"; fi
+  else
+    bad "疑似机密进了版本库:"; printf '      %s\n' $LEAK
+    fix "加进 .gitignore 后 git rm --cached <文件>，并轮换该密钥"
+  fi
+  for f in .env .pi/agent/auth.json .pi/agent/models.json; do
+    if git -C "$LAB" ls-files --error-unmatch "$f" >/dev/null 2>&1; then
+      bad "$f 被跟踪了（应当 ignore）"
+    fi
+  done
+elif [ -f /.dockerenv ] || [ "${PI_LAB_ROOT:-}" = "/opt/pi-ctf" ]; then
+  # ★ 2026-11-04：同 5/9 节 —— 容器里没有 .git 是必然，不该计入告警。
+  printf '  %s·%s 容器内无 git，本条跳过（机密扫描请在宿主仓库跑 selfcheck）%s\n' "$D" "$N" "$N"
+else
+  warn "非 git 仓库，跳过机密扫描"
+fi
+
+# ── 7. 工具链 ─────────────────────────────────────────────────────────────────
+hdr "7/9 工具链"
+command -v py  >/dev/null 2>&1 && ok "py 可用（$LAB/tools/venv）" || bad "py 不在 PATH"
+if command -v py >/dev/null 2>&1; then
+  # ★ 用 find_spec 判存在性：不真加载（import pwn/unicorn 在 drvfs 上要 ~12s；加载留给第 9 组按需）
+  py -c 'import importlib.util as U,sys
+mods=("pwn","z3","Crypto","gmpy2","unicorn")
+miss=[m for m in mods if U.find_spec(m) is None]
+print(",".join(miss)); sys.exit(1 if miss else 0)' >/dev/null 2>&1 \
+    && ok "py 依赖齐（pwn/z3/Crypto/gmpy2/unicorn）" || warn "py 缺部分 CTF 库（pwn/z3/Crypto/gmpy2/unicorn）"
+fi
+MISS=""; MISS_C=""
+for c in poc pocbomber nuclei httpx nmap binwalk foremost; do
+  command -v "$c" >/dev/null 2>&1 && continue
+  # ★ D1=B：宿主机没有就问容器（重活在容器跑，见 ctf_cat 上方注释）
+  if _ctr_probe && _in_ctr "$c"; then MISS_C="$MISS_C $c"; else MISS="$MISS $c"; fi
+done
+if [ -z "$MISS" ] && [ -z "$MISS_C" ]; then ok "侦察/PoC 主链在 PATH"
+elif [ -z "$MISS" ]; then
+  printf '  %s·%s 侦察/PoC 主链 宿主缺：%s（容器内已有）%s\n' "$D" "$N" "$MISS_C" "$N"
+else warn "不在 PATH:$MISS（TOOLS.md 是唯一事实来源，别照 skill 里的名字猜）"; fi
+
+# 7b) 包装完整性：有 CLI 入口的 tools/*.py 必须有 tools/bin/<name> 包装
+#     （2026-10-06 实测：probe 被 AGENTS/TOOLS 引用 5 次，但敲 `probe` 报 command not found）
+UNWRAPPED=""
+for f in "$LAB"/tools/*.py; do
+  b=$(basename "$f" .py)
+  tail -3 "$f" 2>/dev/null | grep -q '__main__' || continue
+  # ★ 2026-11-19：文件名用下划线、命令名用连字符是**有意的**（kimi_token.py → kimi-token，
+  #   因为 TOOLS.md 与 models.json 的 apiKey `!…/tools/bin/kimi-token` 都是连字符写法，
+  #   改命令名会连带改文档与线上配置）。这里两种都认，否则真装好的入口被误报成「敲不出来」。
+  bh=$(echo "$b" | tr '_' '-')
+  [ -x "$LAB/tools/bin/$b" ] || [ -x "$LAB/tools/bin/$bh" ] || UNWRAPPED="$UNWRAPPED $b"
+done
+[ -z "$UNWRAPPED" ] && ok "工具包装完整（有 CLI 入口的 .py 都在 tools/bin/）" \
+  || warn "有 CLI 入口但没包装:$UNWRAPPED（敲不出来，补 tools/bin/<name>）"
+  # 文档命令适配：playbooks / TOOLS.md 里写的命令本机是否真有
+  # （2026-10-03 踩过：从外部 skill 抄了 5 个本机不存在的工具 → 已把「适配」变成这条检查）
+  DOC_BAD=$(python3 "$LAB/tools/doccmd_check.py" 2>/dev/null | grep -c "^      " || true)
+  if [ "${DOC_BAD:-0}" = "0" ]; then ok "文档命令全部适配（SRC 范围）"
+  else warn "有 $DOC_BAD 个文档命令本机不存在且无标注 → python3 tools/doccmd_check.py"; fi
+# ── 7c) 三块盲区能力（★ 2026-10-12 补）：WASM / EVM / .NET ─────────────────────
+#    血账：2026-10-12 逐个实测，这三类载体本机**一个入口都没有**
+#    （wasm2wat 无 / pywasm+wasmtime 无 / pyevmasm+eth_* 无 / dnfile+dncil 无，
+#      skills/ctf-reverse 里 wasm|evm|.net 零命中）。缺了会出现
+#    「题拿到手才去 apt/pip 现装」——比赛现场最贵的那种浪费。
+B_MISS=""; B_MISS_C=""
+for c in wat2wasm wasm2wat wasm-decompile wasm-objdump; do
+  command -v "$c" >/dev/null 2>&1 && continue
+  if _ctr_probe && _in_ctr "$c"; then B_MISS_C="$B_MISS_C $c"; else B_MISS="$B_MISS $c"; fi
+done
+if command -v py >/dev/null 2>&1; then
+  py -c 'import importlib.util as U,sys
+mods=("wasmtime","pywasm","pyevmasm","eth_utils","dnfile","dncil")
+miss=[m for m in mods if U.find_spec(m) is None]
+print(",".join(miss)); sys.exit(1 if miss else 0)' >/dev/null 2>&1 \
+    || B_MISS="$B_MISS py:(wasmtime/pywasm/pyevmasm/eth_utils/dnfile/dncil)"
+fi
+if [ -z "$B_MISS" ] && [ -z "$B_MISS_C" ]; then
+  ok "盲区能力齐（WASM: wabt+wasmtime · EVM: pyevmasm+eth_utils · .NET: dnfile+dncil）"
+elif [ -z "$B_MISS" ]; then
+  printf '  %s·%s 盲区能力 宿主缺：%s（容器内已有）%s\n' "$D" "$N" "$B_MISS_C" "$N"
+else
+  warn "盲区能力缺:$B_MISS（修：pip install wasmtime pywasm pyevmasm eth-utils dnfile dncil）"
+fi
+command -v revkit >/dev/null 2>&1 && ok "revkit 在 PATH（三块能力一个入口）" \
+  || warn "revkit 不在 PATH（bash tools/make-bin.sh 重建包装）"
+
+# 7c-2) WP 抓取器（离线自检：HTML→MD / 日期识别 / 剔除导航）
+if command -v wpfetch >/dev/null 2>&1; then
+  wpfetch --selftest >/dev/null 2>&1 && ok "wpfetch 自检通过（HTML→MD/日期识别）" \
+    || warn "wpfetch --selftest 失败"
+else
+  warn "wpfetch 不在 PATH（bash tools/make-bin.sh）"
+fi
+
+# 7d) 本地知识库（kb）：参考/手法/PoC 统一检索。判据 = 索引存在且不落后于源文件
+#     （索引缺席时 kb 仍可用，但搜索会先报「先跑 kb build」；所以只 warn 不 bad）
+if command -v kb >/dev/null 2>&1; then
+  KB_MSG=$(kb stale 2>&1 | head -1)
+  case "$KB_MSG" in
+    索引最新*) ok "知识库索引最新（$KB_MSG）" ;;
+    *) warn "知识库索引需重建：$KB_MSG → 跑 kb build（全量 ~6s；**本条曾因未转义反引号真的执行过 kb build**）" ;;
+  esac
+else
+  warn "kb 不在 PATH（bash tools/make-bin.sh；首次还要 kb build）"
+fi
+
+# sage：★ 2026-11-04 改成「真跑一次」而不是「PATH 上有没有」——
+#   passagemath 的 sage 落在 tools/venv/bin（不在 PATH），且缺 sage.all 时命令在也跑不通。
+#   旧判据两头都错：装好了说没装、装坏了说装好（用户看 selfcheck 8 条告警里就有这条）。
+# ★ 2026-11-07（D1=B）：宿主跑不通时**再问容器**。
+#   实测：宿主缺 passagemath-symbolics（该模块**没有 Windows wheel**，pip 直接
+#   No matching distribution —— 平台限制，不是没装好）；容器里 `sage -c print(2^100)` 正常。
+#   判据改成三级：宿主真跑通 → 容器跑通（标注，不告警）→ 两边都不行才 warn。
+_sage_probe_ctr() {
+  _ctr_probe || return 1
+  MSYS_NO_PATHCONV=1 docker exec pictf bash -lc \
+    'cd /opt/pi-ctf && PATH=$PWD/tools/bin:$PATH timeout 60 sage -c "print(factor(2**64-1))"' \
+    2>/dev/null | grep -q '641'
+}
+if command -v sage >/dev/null 2>&1 && sage -c "print(factor(2**64-1))" 2>/dev/null | grep -q '641'; then
+  ok "sage 可用（大格/Coppersmith 实测通过）"
+elif _sage_probe_ctr; then
+  printf '  %s·%s sage 宿主跑不通（无 Windows wheel），**容器内实测可用** → crypto 去容器跑%s\n' "$D" "$N" "$N"
+elif command -v sage >/dev/null 2>&1; then
+  warn "sage 命令在但跑不通（多半缺 sage.all → bash docker/sage-shim.sh）"
+  fix "bash docker/sage-shim.sh \"${PI_LAB_ROOT:-/opt/pi-ctf}/tools/venv\""
+else
+  warn "没装 sage（crypto 大格/Coppersmith 会缺）"
+  fix "tools/venv/bin/pip install -r requirements-extra.txt && bash docker/sage-shim.sh"
+fi
+
+# 7e) 子代理角色接线（★ 2026-10-12 补）：角色 = **常驻提示词**，是唯一每轮都在的契约
+#     血账：2026-10-12 逐个盘 5 个角色，`kb`/`poc`/`revkit`/`py` **零命中** →
+#     本地 2.3 万块知识库 + 1.13 万 PoC 对 Worker 完全不可见；`fgs publish`（回程）
+#     在 5 个角色里也零命中，只在随派活生成的任务书里出现过一次。
+#     后果：知识库白建、回程靠主会话手抄（丢 confidence 与出处）。
+AG_DIR="$LAB/.pi/agents"
+if [ -d "$AG_DIR" ]; then
+  AG_BAD=""; AG_WARN=""; AG_N=0
+  for f in "$AG_DIR"/*.md; do
+    [ -e "$f" ] || continue
+    AG_N=$((AG_N + 1))
+    n=$(basename "$f" .md)
+    for k in name description tools model; do
+      grep -q "^$k:" "$f" || AG_BAD="$AG_BAD $n(缺$k)"
+    done
+    case "$n" in
+      ctf-route|ctf-verify)
+        grep -q "fgs publish" "$f" || AG_WARN="$AG_WARN $n(没写回程)" ;;
+      ctf-recon)
+        grep -q "^tools:.*bash" "$f" || AG_BAD="$AG_BAD $n(无bash→够不着kb/poc)" ;;
+    esac
+  done
+  if [ -n "$AG_BAD" ]; then bad "角色接线有问题:$AG_BAD"
+  elif [ -n "$AG_WARN" ]; then warn "角色缺回程契约（结论不会自动进图）:$AG_WARN"
+  else ok "子代理角色接线齐（$AG_N 个：frontmatter · 回程走 outbox · recon 可查 kb/poc）"; fi
+fi
+
+# 7f) 跨题死路库接线（★ 2026-10-12）：库在 + 闸门在 + 简报会提示
+#     为何单独一条：「已证死路」是难题里最贵、别人最没有的资产，但它跨题只能靠
+#     一本库 + `fgs brief` 主动提示——缺哪一段，它就会静静退化回本题黑板里的一行字。
+DLIB="$LAB/docs/writeups/死路库.md"
+if [ ! -f "$DLIB" ]; then
+  warn "死路库不在（$DLIB）→ 闸门会现建，但库头的记录格式说明会缺"
+elif grep -q "_deadend_hits" "$LAB/board/fgs.py" && grep -q "DEADLIB" "$LAB/board/retrospect.py"; then
+  DLN=$(awk '/^```/{f=!f} !f && /^### /{c++} END{print c+0}' "$DLIB")
+  ok "跨题死路库接线齐（$DLN 条；闸门 retrospect.py → 简报 fgs brief）"
+else
+  bad "死路库接线断了（fgs.py 的 _deadend_hits 或 retrospect.py 的 DEADLIB 丢了）"
+fi
+
+# 7g) 派活闸门（lane-watch）：kickoff 后 0 路 → **在途中硬拦**
+#     血账（2026-10-12 实测）：会话 01a12e9b 跑完 kickoff（它自己打印了可直接粘的两路命令），
+#     之后 15 次工具调用 / **0 次 subagent** —— 一个人把题做完了。
+#     以前只有软提醒（模型划过去）+ `fgs solved` 的事后闸门（太晚）。
+LW_M="$LAB/tools/lanewatch.mjs"; LW_E="$EXT_DIR/lane-watch.ts"
+if [ ! -f "$LW_M" ] || [ ! -f "$LW_E" ]; then
+  warn "派活闸门缺件（mjs=$([ -f "$LW_M" ] && echo 有 || echo 无) / ts=$([ -f "$LW_E" ] && echo 有 || echo 无)）—— 缺一个就静默不生效"
+elif node "$LW_M" --selftest >/dev/null 2>&1; then
+  ok "派活闸门在位（lanewatch.mjs --selftest 绿 · 扩展 lane-watch.ts 已加载）"
+else
+  bad "lanewatch.mjs --selftest 红 → node tools/lanewatch.mjs --selftest"
+fi
+
+# ── 8. 已知踩坑守卫 ───────────────────────────────────────────────────────────
+hdr "8/9 已知坑守卫"
+# drvfs 上 flock 不可靠 → 黑板必须还在用 mkdir 锁，不该有人"顺手改成 flock"
+# 判据是「真的调用了 fcntl/flock()」，不是注释里出现这个词（注释里专门写明了为什么不用）
+if grep -qE 'import fcntl|fcntl\.flock|(^|[^.a-zA-Z_])flock\(' "$LAB/board/fgs.py" 2>/dev/null; then
+  warn "fgs.py 真调用了 flock —— /mnt/d 上它不可靠，确认是有意为之"
+elif grep -qE '\.mkdir\(\)' "$LAB/board/fgs.py" 2>/dev/null; then
+  ok "黑板仍用 mkdir 原子锁（drvfs 安全）"
+else
+  warn "fgs.py 里既没 flock 也没 mkdir —— 加锁实现变了？重看 board/schema.md"
+fi
+[ -d "$LAB/work" ] && ok "work/ 在（留档目录）" || warn "work/ 不存在"
+[ -f "$LAB/docs/writeups/手法库.md" ] && ok "手法库在（$(grep -c '^##' "$LAB/docs/writeups/手法库.md" 2>/dev/null) 条）" || warn "手法库缺失"
+# MCP / 扩展是「第三方代码」入口：列出来供人核对来源（工具描述可被注入，见 AGENTS 纪律）
+MCP_F="$LAB/.pi/agent/mcp-cache.json"
+if [ -f "$MCP_F" ]; then
+  N_MCP=$(python3 -c 'import json,sys
+try:
+    d=json.load(open(sys.argv[1],encoding="utf-8"))
+    k=d.get("servers") if isinstance(d,dict) else None
+    print(len(k) if k else (len(d) if hasattr(d,"__len__") else "?"))
+except Exception: print("?")' "$MCP_F" 2>/dev/null || echo "?")
+  printf '  %s·%s 已装 MCP 条目 %s —— 逐个确认来源（工具描述可被注入）%s\n' "$D" "$N" "$N_MCP" "$N"
+fi
+
+
+# ── 7h) 本地评测台 + OSINT 探针（2026-11-07 落地，A/B/D 三项的可用替代路径）──
+#   bench_local：不依赖平台 token 就能量方差/做两臂对照（A/B 项）
+#   osint_probe：把「本机不可达」变成可复核判据（D 项）
+if [ -f "$LAB/tools/bench_local.py" ]; then
+  if python3 "$LAB/tools/bench_local.py" selftest >/dev/null 2>&1; then
+    ok "本地评测台自检通过（量方差/两臂对照不需要平台 token）"
+  else
+    bad "bench_local.py selftest 红 → python3 tools/bench_local.py selftest"
+  fi
+else
+  warn "缺 tools/bench_local.py（A/B 项没有本地替代路径）"
+fi
+if [ -f "$LAB/tools/osint_probe.py" ]; then
+  if python3 "$LAB/tools/osint_probe.py" --selftest >/dev/null 2>&1; then
+    ok "OSINT 探针自检通过（源可达性可复核，别凭印象写结论）"
+  else
+    bad "osint_probe.py --selftest 红 → python3 tools/osint_probe.py --selftest"
+  fi
+else
+  warn "缺 tools/osint_probe.py（D 项结论会退回文字描述）"
+fi
+
+# ── 6b) 认知契约镜像 + 就绪计数口径 + 测试数量单一可写点（2026-11-07 新增）──
+#   三件都是"会静默失效"的东西：契约漂移不报错、计数口径错不报错、
+#   测试数漂移只在 4b 才红。挂进体检，让它每轮都被看一眼。
+if [ -f "$LAB/board/tests/test_contract_mirror.py" ]; then
+  if python3 "$LAB/board/tests/test_contract_mirror.py" >/dev/null 2>&1; then
+    ok "认知契约镜像一致（证据等级 3 档 / 台账 3 段，代码与文档不漂）"
+  else
+    bad "认知契约漂移 → python3 board/tests/test_contract_mirror.py 看哪条"
+  fi
+fi
+if [ -f "$LAB/tools/home-fix.sh" ]; then
+  # ★ 2026-11-19：HOME 下的运行时缓存属主（root 建的目录 → 降权后 ctf 写不进去）。
+  #   实测两个受害者：.sage 让 sage 一启动就 PermissionError（crypto 全废）；
+  #   .ruff_cache/0.17.5 让 ruff 报 Permission denied（selfcheck 误判「代码有致命问题」）。
+  if bash "$LAB/tools/home-fix.sh" --check >/dev/null 2>&1; then
+    ok "HOME 缓存属主正常（.sage/.cache/.npm/.local 都归运行用户）"
+  else
+    warn "HOME 缓存属主异常 → 容器入口会自动修；手工可用 bash tools/home-fix.sh"
+  fi
+fi
+if [ -f "$LAB/tools/readiness.mjs" ]; then
+  if node "$LAB/tools/readiness.mjs" --selftest >/dev/null 2>&1; then
+    ok "就绪计数口径自检过（X/Y=Σ明细 · N=0 不许假装能点）"
+  else
+    bad "readiness.mjs selftest 红 → node tools/readiness.mjs --selftest"
+  fi
+fi
+if [ -f "$LAB/tools/testcount.py" ]; then
+  if python3 "$LAB/tools/testcount.py" --check >/dev/null 2>&1; then
+    ok "测试数量单一可写点一致（tools/testcount.py --check）"
+  else
+    bad "测试数漂移 → python3 tools/testcount.py --sync"
+  fi
+fi
+
+
+# ── 9. CTF 题型体检（开赛前 10 秒看清"哪一类现在能打、缺什么"）────────────────
+#     分工：CTF 归本仓（终端 pi），SRC/渗透/应急归 dsh —— 见 docs/分工-与dsh.md
+hdr "9/9 CTF 题型体检"
+PY_MISS=$(py -c 'import importlib.util as U
+miss=[m for m in ["pwn","z3","Crypto","gmpy2","sympy","requests","bs4","capstone","unicorn","ecdsa","ropgadget","PIL","yaml"]
+      if U.find_spec(m) is None]
+print(",".join(miss))' 2>/dev/null || echo "py不可用")
+# ★ 2026-10-30：结论行必须**永远**出现（"py 弹药" 是 test_selfcheck.py 的判据），
+#   原来只有"全齐"时才打 ok、缺库时只 warn 不带这几个字 → 缺任一库判据就失效。
+if [ "$PY_MISS" = "py不可用" ]; then
+  bad "py 弹药不可用 → tools/bin/py 跑不起来（venv 缺了？）"
+elif [ -z "$PY_MISS" ]; then
+  ok "py 弹药齐（pwn/z3/Crypto/gmpy2/sympy/requests/bs4/capstone/unicorn/ecdsa/ropgadget…）"
+else
+  warn "py 弹药缺库：$PY_MISS → tools/venv/bin/pip install <库>（按题型取舍，pwn/crypto 缺 pwn/z3 才算硬伤）"
+fi
+
+
+
+ctf_cat() {   # 类名 | 必需工具 | 可选工具
+  local cat="$1" need="$2" opt="$3" m="" n="" m_c="" n_c=""
+  for x in $need; do
+    command -v "$x" >/dev/null 2>&1 && continue
+    if _ctr_probe && _in_ctr "$x"; then m_c="$m_c $x"; else m="$m $x"; fi
+  done
+  for x in $opt; do
+    command -v "$x" >/dev/null 2>&1 && continue
+    if _ctr_probe && _in_ctr "$x"; then n_c="$n_c $x"; else n="$n $x"; fi
+  done
+  if [ -n "$m" ]; then bad "$cat 缺必需：$m → 补上再开赛"
+  elif [ -n "$n" ]; then printf '  %s·%s %-10s 可选缺：%s（按需装/换路线）%s\n' "$D" "$N" "$cat" "$n" "$N"
+  elif [ -n "$n_c" ] || [ -n "$m_c" ]; then
+    printf '  %s·%s %-10s 宿主缺：%s（容器内已有，重活在容器跑 → 不算缺口）%s\n' \
+      "$D" "$N" "$cat" "$(echo $m_c $n_c)" "$N"
+  else ok "$cat 工具链齐"; fi
+}
+ctf_cat "pwn"       "gdb objdump readelf nc"      "socat qemu-aarch64"
+ctf_cat "reverse"   "file strings objdump"        "r2 radare2 pycdc pycdas pyinstxtractor upx"
+ctf_cat "crypto"    "python3 openssl"              "sage hashcat john"
+ctf_cat "misc"      "file unzip"                   "binwalk foremost exiftool zsteg steghide tesseract 7z"
+ctf_cat "forensics" "file"                         "vol tshark foremost"
+ctf_cat "web"       "curl"                         "sqlmap ffuf nuclei nmap"
+# Windows 侧逆向桥（IDA/Ghidra 只有 Windows 版）—— 慢，仅报状态
+if [ -x "$LAB/tools/bin/ida" ]; then
+  # ★ 2026-11-04：容器里**不可能**通 —— winbridge 的候选路径全是 /mnt/d/...（WSL 视角）
+  #   和 tools/win/（.dockerignore 排除），容器内两者都不存在（实测）。
+  #   IDA/Ghidra 只有 Windows 版，走的是宿主 interop，容器天生够不着 → 不算缺陷。
+  if [ -f /.dockerenv ] || [ "${PI_LAB_ROOT:-}" = "/opt/pi-ctf" ]; then
+    printf '  %s·%s ida 桥（Windows 侧）在容器内不适用 —— 要逆向上宿主跑 tools/bin/ida%s\n' "$D" "$N" "$N"
+  # ★ 2026-11-17：直接 exec 脚本在 Git Bash/MSYS 下**不生效**（#!/bin/bash 不可执行 → rc=126），
+  #   而 `bash tools/bin/ida check` 是 rc=0、IDA 也找得到 → 原来一直假报「ida 桥不通」。
+  elif timeout 30 bash "$LAB/tools/bin/ida" check >/dev/null 2>&1; then ok "ida 桥通（Windows 侧 IDA 可用）"
+  else warn "ida 桥不通（interop/路径）→ 先看 tools/TOOLS.md「Windows 侧逆向」节"; fi
+fi
+
+
+# ── 零依赖静态检查（2026-11-13 新增）────────────────────────────────────────
+# 为什么零依赖：本想装 ruff+shellcheck，实测 pip 拉取 10 分钟未完成（网络不稳）。
+# 而 CI 里装外部工具本身就是可靠性风险 —— 网络一抖门禁就红得莫名其妙。
+# tools/lint_zero.py 只用 Python 自带的 ast，查的是「确定能查出真问题」的几类：
+#   语法错误 / 裸 except / except-pass / subprocess 缺 timeout 或缺 encoding。
+# 只把 FAIL 计入 FAILS；WARN 只提示，不卡门禁（风格问题不该挡发布）。
+if [ -f "$LAB/tools/lint_zero.py" ]; then
+  # ★ 只扫**本仓自己的代码**：board/*.py + tools 顶层 *.py。
+  #   第一版传了 board tools，rglob 把 tools/venv、tools/vendor（1.7 万个第三方文件）
+  #   全扫了 → 1751 个 FAIL 全是别人的代码，噪声把真问题埋掉。
+  _lz_files=$(cd "$LAB" && ls board/*.py tools/*.py 2>/dev/null)
+  # ★ 2026-11-13：优先用 ruff（AST 级，比手写正则准得多）——
+  #   实测 venv 里本来就有 ruff 0.17.5，之前查错位置（查的是宿主坏 venv）以为没有。
+  #   ruff 治「未定义名/未使用 import/语法级错误」这类确定性问题；
+  #   lint_zero 留作兜底（ruff 不在时仍能查 timeout/encoding 这类 ruff 不管的）。
+  # ★ 2026-11-17：venv 是 **WSL 里建的 Linux venv**（pyvenv.cfg home=/home/breakingbad/...），
+  #   在 Windows 侧 tools/venv/bin/python 是断链 → 原来永远判「ruff 不可用」。
+  #   改为「venv 能跑就用 venv，否则用 PATH 上的 ruff」（宿主 anaconda3/Scripts/ruff.exe 实测 0.15.1）。
+  _rf_bin=""
+  if [ -x "$LAB/tools/venv/bin/python" ] && "$LAB/tools/venv/bin/python" -m ruff --version >/dev/null 2>&1; then
+    _rf_bin="$LAB/tools/venv/bin/python -m ruff"
+  elif command -v ruff >/dev/null 2>&1 && ruff --version >/dev/null 2>&1; then
+    _rf_bin="ruff"
+  fi
+  if [ -n "$_rf_bin" ]; then
+    # 只选**致命**级别：E9(语法) F63/F7/F82(未定义名/占位符错) —— 风格类一律不选，
+    # 避免"为过检而改风格"（那不是修 bug，是制造 churn）。
+    # ★ 2026-11-19 加 --no-cache：实测容器里 .ruff_cache/0.17.5 是 root 建的（drwxr-xr-x root root），
+    #   降到 ctf 后 ruff 写临时文件 Permission denied → 判「ruff 发现致命问题」，
+    #   而**代码其实一行没错**（--no-cache 实跑 All checks passed）。自检结果必须是确定性的，
+    #   不值得为一个纯加速缓存把绿的说成红的 —— 直接不落盘。
+    _rf=$(cd "$LAB" && timeout 240 $_rf_bin check $_lz_files \
+          --select E9,F63,F7,F82 --output-format concise --no-cache 2>&1 | tail -5)
+    if echo "$_rf" | grep -q 'All checks passed'; then
+      ok "ruff 致命级检查通过（E9/F63/F7/F82）"
+    else
+      bad "ruff 发现致命问题：$(echo "$_rf" | head -3 | tr '\n' ' ')"
+    fi
+  else
+    warn "ruff 不可用 —— 退回 lint_zero（覆盖范围较窄）"
+  fi
+  _lz_out=$(cd "$LAB" && timeout 240 python3 tools/lint_zero.py $_lz_files 2>&1 | tail -3)
+  _lz_rc=$?
+  if [ "$_lz_rc" -eq 124 ]; then
+    warn "lint_zero 超时（240s）—— 慢盘/大目录，跳过"
+  elif echo "$_lz_out" | grep -q '^FAIL'; then
+    bad "lint_zero 发现硬问题：$(echo "$_lz_out" | grep '^FAIL' | head -3 | tr '\n' ' ')"
+  else
+    ok "lint_zero 通过（$(echo "$_lz_out" | tail -1)）"
+  fi
+fi
+# ── shell 脚本：语法 + set -u 未定义变量（ruff 只管 Python）───────────────
+# ★ 2026-11-18 事故：docker/provision-agent.sh 引用 $ROOT 却从未定义它，配上
+#   set -euo pipefail → 容器每次启动都死在 provision 阶段、无限重启（Restarting(1)）。
+#   ruff 不扫 shell，本机也没有 shellcheck（pip 拉不动），所以自写零依赖检查器：
+#   ① bash -n 语法 ② set -u 下引用了**全文件从未赋值**的 $NAME —— 正是那次事故的形态。
+#   实测误报为 0：141 个脚本全绿；把修复前的 provision-agent.sh 喂进去，它精确指出 L163 $ROOT。
+if [ -f "$LAB/tools/lint_sh.py" ]; then
+  _sh_out=$(cd "$LAB" && timeout 240 python3 tools/lint_sh.py 2>&1)
+  _sh_rc=$?
+  if [ "$_sh_rc" -eq 124 ]; then
+    warn "shell 体检超时（240s）—— 慢盘，跳过"
+  elif echo "$_sh_out" | grep -q '^FAIL'; then
+    bad "shell 体检发现硬问题（未定义变量/语法）：$(echo "$_sh_out" | grep '^FAIL' | head -3 | tr '\n' ' ')"
+  elif [ "$_sh_rc" -ne 0 ]; then
+    warn "shell 体检异常退出 rc=$_sh_rc：$(echo "$_sh_out" | tail -2 | tr '\n' ' ')"
+  else
+    ok "shell 体检通过（$(echo "$_sh_out" | tail -1)）"
+  fi
+fi
+# ── 结论自检台账（verify_claim）──────────────────────────────────────────
+# 交付「发现缺陷 / 根因锁定」类结论前应登记证据等级；这里只报状态，不卡门禁
+# （因为它依赖人主动登记，卡门禁会迫使为了过检而登记假数据）。
+if [ -x "$LAB/tools/verify_claim.py" ]; then
+  # grep -c 空表时自己就打印 0（并返回 1）——旧写法再 "|| echo 0" 会拼成 "0\n0"，
+  # 于是下面 [ -gt 0 ] 报 "integer expected"，每次 selfcheck 都刷一条假告警。
+  _vc_n=$(python3 "$LAB/tools/verify_claim.py" --list 2>/dev/null | grep -c '\[' || true)
+  _vc_n=${_vc_n:-0}
+  if [ "$_vc_n" -gt 0 ]; then
+    ok "结论台账：已登记 $_vc_n 条（verify_claim --list 可查）"
+  else
+    printf '  %s·%s 结论台账为空 —— 报缺陷前建议跑 tools/verify_claim.py 登记证据等级%s\n' "$D" "$N" "$N"
+  fi
+fi
+# ── 结论 ─────────────────────────────────────────────────────────────────────
+echo
+if [ "$FAIL" -eq 0 ] && [ "$WARN" -eq 0 ]; then
+  printf '%s结论: ✓ 全部通过%s\n' "$G$B" "$N"
+elif [ "$FAIL" -eq 0 ]; then
+  printf '%s结论: ⚠ 通过（%d 条警告）%s\n' "$Y$B" "$WARN" "$N"
+else
+  printf '%s结论: ✗ %d 项失败 / %d 项警告%s\n' "$R$B" "$FAIL" "$WARN" "$N"
+fi
+exit $((FAIL > 0 ? 1 : 0))

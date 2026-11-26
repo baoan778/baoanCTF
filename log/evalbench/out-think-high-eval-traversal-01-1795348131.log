@@ -1,0 +1,5 @@
+FOUND_FLAG=flag{local-eval-traversal-4d90ab}
+
+- 已确认：`/file?name=` 存在路径穿越（`../../etc/passwd` 与 `/etc/passwd` 均成功），读取 `/tmp/flag.txt` 得到 flag，经字节级验证（`flag{local-eval-traversal-4d90ab}\n`）。
+- 已证伪：`/flag`、`/root/flag`、`/var/www/*` 等常见落点均不存在。
+- 还差什么：无，拿到 flag。

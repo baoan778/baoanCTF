@@ -1,0 +1,5 @@
+#!/bin/bash
+# libc 数据库检索 —— 包装 tools/libcsearch.py
+SELF="$0"; . "$(cd "$(dirname "$0")/../libexec" && pwd)/labenv.sh"
+[ -x "$PY" ] || lab_die "找不到 python"
+exec "$PY" "$T/libcsearch.py" "$@"

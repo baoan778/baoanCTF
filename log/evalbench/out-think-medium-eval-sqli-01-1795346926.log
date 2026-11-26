@@ -1,0 +1,3 @@
+FOUND_FLAG=flag{local-eval-sqli-3f9a1c}
+
+SQLi 已绕过登录（`username=admin' -- `），响应中返回了 `session=tok-admin-9f21`；用它访问 `/dashboard` 后，直接返回了这个 flag。

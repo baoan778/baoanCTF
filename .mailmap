@@ -1,0 +1,22 @@
+# .mailmap —— 把历史上出现过的多个提交身份归一到唯一作者
+#
+# 为什么用 .mailmap 而不是重写历史：
+#   1. git 原生支持（git log / git shortlog / GitHub 都读它），零风险
+#   2. 重写 338 个提交需要 fast-export/fast-import 或 filter-branch ——
+#      本项目实测 filter-branch 在 MSYS git 下报 "not a git repository"，
+#      而 fast-import 在处理一处「子模块转普通文件」的历史提交时**丢了 11 个文件**
+#      （1473 → 1462）。已回滚。为了改个显示名冒丢内容的风险不值得。
+#
+# 效果：git log 显示 baoan778；GitHub 把提交关联到 @baoan778 账号并计入贡献图。
+#
+# 格式：正确名字 <正确邮箱>  旧名字 <旧邮箱>
+
+baoan778 <2363799073@qq.com>  baoan <baoan@local>
+baoan778 <2363799073@qq.com>  baoan-agent <agent@local>
+baoan778 <2363799073@qq.com>  pua-agent <pua@local>
+baoan778 <2363799073@qq.com>  agent <a@b>
+baoan778 <2363799073@qq.com>  pi-lab <pi@lab.local>
+baoan778 <2363799073@qq.com>  pi-lab <pi-lab@local>
+baoan778 <2363799073@qq.com>  pi-lab <pi@lab>
+baoan778 <2363799073@qq.com>  pictf <pictf@local>
+baoan778 <2363799073@qq.com>  agent <agent@local>

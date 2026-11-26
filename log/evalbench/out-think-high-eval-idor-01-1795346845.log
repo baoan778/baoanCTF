@@ -1,0 +1,5 @@
+FOUND_FLAG=flag{local-eval-idor-7b2d40}
+
+- 已确认：IDOR——`/note?id=1` 是 public，`/note?id=2` 直接返回 private 笔记，内含 flag（od -c 逐字节核对无变形）。
+- 已证伪：id=3..5 返回 “no such note”（不存在的 ID）。
+- 还差什么：无。

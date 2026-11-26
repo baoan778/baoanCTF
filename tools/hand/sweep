@@ -1,0 +1,236 @@
+#!/bin/bash
+# ─────────────────────────────────────────────────────────────────────────────
+# sweep —— 清理"这次干活留下的残留进程"（移植 Rotom 的孤儿进程回收，适配 pi-lab）
+#
+# 为什么需要：探索时经常临时起 http.server / ssh -N 隧道 / nmap / 后台 py 脚本。
+# 会话被超时砍掉或忘了收尾 → 它们继续跑（占端口、烧 CPU、甚至对内网继续发包）。
+# Rotom 用 process group + PID 落盘；我这边单机，用"登记 + 扫+ 报告/清理 三件事"就够。
+#
+# 用法：
+#   sweep ls                      # 只读：列出登记过的 PID + 扫到的可疑残留
+#   sweep track <名字> [PID]      # 登记（PID 缺省从 stdin 读，便于 `cmd & echo $! | sweep track x`）
+#   sweep kill <名字|--all>       # 杀登记的：SIGTERM → 3s → SIGKILL，并记日志
+#   sweep clean [--force]         # 扫可疑残留：默认只报告，--force 才真杀
+#
+# 登记文件：work/.procs/<名字>.pid   ·  审计：work/.procs/sweep.log（带时间戳，可进证据）
+# 退出码：0 正常 / 1 有活着的残留（方便 selfcheck 判警）
+# ─────────────────────────────────────────────────────────────────────────────
+set -uo pipefail
+# 仓库根自解析（发布包/容器里目录不同）：$PI_LAB_ROOT → 从脚本位置推（tools/hand 两级深）
+LAB="${PI_LAB_ROOT:-}"
+if [ -z "$LAB" ]; then
+  _s="$0"
+  case "$_s" in */*) : ;; *) _s="$(command -v -- "$_s" 2>/dev/null || echo "$_s")" ;; esac
+  _i=0
+  while [ -L "$_s" ] && [ "$_i" -lt 10 ]; do
+    _l="$(readlink "$_s")"
+    case "$_l" in /*) _s="$_l" ;; *) _s="$(dirname "$_s")/$_l" ;; esac
+    _i=$((_i + 1))
+  done
+  LAB="$(cd "$(dirname "$_s")/../.." && pwd)"
+fi
+DIR="${PI_SWEEP_DIR:-$LAB/work/.procs}"   # 测试可用 PI_SWEEP_DIR 隔离（别动真 work/.procs）
+LOG="$DIR/sweep.log"
+mkdir -p "$DIR"
+
+# 可疑模式：本 lab 干活时容易留下的东西（不含 pi/agent 自身）
+# ⚠ 「python3 -m http.server」不能写死：cmdline 记的是**解析后的解释器路径**，
+#   `tools/venv/bin/python`(3.14) 实际是 `/usr/bin/python3.14` → 写死 python3 会漏扫。
+#   2026-10-10：test_sweep 步骤 3/4 三条断言红，根因就是这里（漏扫 → "场上永远干净"）。
+#   用 `[0-9.]*` 吃掉版本号，`-m http.server` 保持字面。
+PATTERNS='python[0-9.]* -m http.server|tools/venv/bin/python -c|/usr/bin/ssh -N|ssh -N -o|ncat -l|nc -l|socat|nmap -Pn|masscan'
+
+say() { printf '%s\n' "$*"; }
+audit() { printf '%s\t%s\n' "$(date -Is)" "$*" >> "$LOG"; }
+
+# 真活着才算：**僵尸（state=Z）是"已死但父进程还没收尸"，不算活着**。
+# 踩过：杀掉自己 spawn 的子进程后，它变 Z，`kill -0` 仍返回成功 → sweep 误报"杀不掉"，
+# 而且不写审计（表现成测试里的两条失败）。
+alive() {
+  local pid="${1:-}" st
+  [ -n "$pid" ] || return 1
+  kill -0 "$pid" 2>/dev/null || return 1
+  st=$(awk '{print $3}' "/proc/$pid/stat" 2>/dev/null)
+  [ "$st" = "Z" ] && return 1
+  return 0
+}
+
+# ★ 防自杀护栏：绝不对"自己 / 自己的祖先 / 命令行里带 sweep|pgrep 的进程"下手。
+#   踩过：`pgrep -f "tools/venv/bin/python -c"` 把**正在执行这条命令的 shell 自己**
+#   也匹配进去了（它的 cmdline 里就含这个模式串）→ sweep kill --all 把自己的 shell 杀了（exit 143）。
+#   2026-10-10 又踩到**兄弟进程**版本：`selfcheck` 的「py 依赖齐」探针本身就是
+#   `tools/venv/bin/python -c import importlib.util …` → 命中本工具的「后台 py」模式；
+#   它是 sweep 的**兄弟**（不是自己也不是祖先），旧护栏拦不住 → 并行跑 selfcheck 时
+#   test_sweep「无残留时退出码 0」随机变红（连红两次才定位到）。探针不是残留，按名字放行。
+#   同日第二次（同一个 race 的另一种形态）：`test_replay_env` 的**并行** import 探针
+#   `tools/venv/bin/python -c import pwn, zlib, PIL, Crypto, z3` 也命中同一模式 →
+#   步骤 6 的「场上应当干净」随机红。探测型短命进程不是残留，一并按特征放行。
+dbg() { [ "${PI_SWEEP_DEBUG:-0}" = "1" ] && printf '   [guard] %s\n' "$*" >&2; return 0; }
+
+is_safe_target() {
+  local pid="${1:-}" p cmd
+  [ -z "$pid" ] && { dbg "空 pid"; return 1; }
+  case "$pid" in ''|*[!0-9]*) dbg "非数字 pid=$pid"; return 1 ;; esac
+  [ "$pid" = "$$" ] && { dbg "pid=$pid 就是我自己"; return 1; }
+  p=$$
+  while [ -n "$p" ] && [ "$p" != "0" ] && [ "$p" != "1" ]; do
+    [ "$pid" = "$p" ] && { dbg "pid=$pid 是我的祖先"; return 1; }
+    p=$(awk '{print $4}' "/proc/$p/stat" 2>/dev/null)
+  done
+  # ★★ 2026-11-20：先看状态再读 cmdline。**D 态（不可中断睡眠）进程的 cmdline 读下去会
+  #   永久阻塞**（实测容器里一批卡在 __access_remote_vm 的 ps/find/grep），
+  #   而清残留正是「遍历一堆 pid 逐个读」的场景 —— 一个 D 态进程就能让 sweep 挂死。
+  #   /proc/<pid>/stat 永远不阻塞。D 态进程根本不可能在正常干活，跳过它不会漏清。
+  local _st
+  _st=$(awk '{print $3}' "/proc/$pid/stat" 2>/dev/null)
+  case "$_st" in D|X|x) dbg "pid=$pid 处于 D 态（不可中断睡眠）→ 不读 cmdline，不算残留"; return 1 ;; esac
+  # ★ 读一次 cmdline 并用它做两边判断（原来两次读 → 进程正好退出时第二次读到空，
+  #   把它当残留上报 → 2026-10-10 压测：步骤 6「场上应当干净」仍会随机红）。
+  #   同时：**读不到（进程已消失/退化成僵尸）＝ 没东西可清理** → 一律不看。
+  cmd=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null || true)
+  [ -z "$cmd" ] && { dbg "pid=$pid 读不到 cmdline（进程已退出？）→ 不算残留"; return 1; }
+  if printf '%s\n' "$cmd" | grep -qE 'sweep|pgrep|grep -v|importlib\.util|find_spec|import pwn, zlib, PIL, Crypto, z3'; then
+    dbg "pid=$pid 的命令行里含 sweep|pgrep|grep -v|自检/回放探针：$(printf '%s' "$cmd" | cut -c1-80)"
+    return 1
+  fi
+  dbg "pid=$pid 通过：$(printf '%s' "$cmd" | cut -c1-60)"
+  return 0
+}
+
+# ★ 扫可疑残留并**过滤掉当前进程树**。
+#   踩过（2026-10-03）：把整段脚本当一个 `bash -c` 参数跑时，**父 shell 的 cmdline 里
+#   含模式串**（脚本文本里就有 `tools/venv/bin/python -c`）→ 被当成残留进程 →
+#   测试「无残留时退出码 0」随机变红，且因为日志被删而查不到证据（两个缺陷都已修）。
+#   is_safe_target 的护栏以前只用在 kill 上，ls/clean 漏了 —— 这里统一走它。
+SCAN_TIMEOUT_S=${PI_SWEEP_SCAN_TIMEOUT:-8}   # 扫描超时上限（秒）
+
+scan_hits() {
+  local l pid raw rc
+  # ★ 容器里 /proc 有卡死进程（D 状态）时，ps/pgrep 会**永久挂住**：
+  #   2026-11-01 实测一个 python3 卡在 __vma_start_write → ps/pgrep 全挂 → sweep ls 永不返回，
+  #   连带 test_sweep 60s 超时、selfcheck 整轮卡住。加超时兜底：
+  #   宁可显式报「扫描不可靠」，也不能把调用方一起拖死。
+  raw=$(timeout "$SCAN_TIMEOUT_S" pgrep -af "$PATTERNS" 2>/dev/null); rc=$?
+  if [ "$rc" -eq 124 ]; then
+    say "  ⚠ 进程扫描超时（${SCAN_TIMEOUT_S}s）：容器内 /proc 可能卡死，结果不可靠；先修环境（重启 Docker 引擎）" >&2
+    printf '%s\n' "$(date -Is)" > "$DIR/.scan-timeout"
+    return 0
+  fi
+  rm -f "$DIR/.scan-timeout"
+  printf '%s\n' "$raw" | grep -vE 'sweep|pgrep|grep -v' | while IFS= read -r l; do
+    [ -z "$l" ] && continue
+    pid=${l%% *}
+    # ⚠ 极性：is_safe_target 返回 **0 = 是可清理的真残留**，返回 1 = 别碰（自己/祖先/护栏词）。
+    #   写反过一次（用 `&& continue`）→ 把真残留全跳过 → "场上永远干净" → 三个断言假绿。
+    is_safe_target "$pid" || continue
+    printf '%s\n' "$l"
+  done
+}
+
+cmd_ls() {
+  local found=0
+  say "── 登记过的进程（$DIR）──"
+  shopt -s nullglob
+  for f in "$DIR"/*.pid; do
+    local name pid cmd
+    name=$(basename "$f" .pid); pid=$(cat "$f" 2>/dev/null || true)
+    if alive "$pid"; then
+      cmd=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null | cut -c1-90)
+      say "  ● $name  pid=$pid  活着  $cmd"
+      found=$((found+1))
+    else
+      say "  ○ $name  pid=${pid:-?}  已退出"
+    fi
+  done
+  say
+  say "── 扫到的可疑残留（模式：http.server / ssh -N / nmap / socat / nc -l / 后台 py）──"
+  local hits
+  hits=$(scan_hits || true)
+  if [ -f "$DIR/.scan-timeout" ]; then
+    say "  ⚠ 扫描不可靠（已超时）：只保证「登记过的进程」那段准确"
+    return 1
+  fi
+  if [ -n "$hits" ]; then
+    printf '%s\n' "$hits" | while IFS= read -r l; do say "  ! ${l:0:120}"; done
+    found=$((found+$(printf '%s\n' "$hits" | wc -l)))
+  else
+    say "  （干净）"
+  fi
+  return $((found > 0 ? 1 : 0))
+}
+
+cmd_track() {
+  local name="${1:?用法: sweep track <名字> [PID]}"; local pid="${2:-}"
+  # 名字会拼进路径（$DIR/<名字>.pid）→ 不许穿越：
+  # `sweep track ../../x` 或 `a/b` 会把登记文件写到 DIR 外面（读那边同理）。
+  case "$name" in
+    */*|*..*|*\\*|.*|"") say "✗ 名字不合法（$name）：只允许字母/数字/._-，且不能带路径分隔符"; return 1 ;;
+  esac
+  [ -n "$pid" ] || read -r pid
+  [ -n "$pid" ] || { say "✗ 没给 PID"; return 1; }
+  if ! is_safe_target "$pid"; then
+    say "✗ 拒绝登记 pid=$pid：它是我自己/我的祖先/命令行含 sweep|pgrep 的进程（防自杀）"; return 1
+  fi
+  echo "$pid" > "$DIR/$name.pid"
+  audit "track $name pid=$pid"
+  say "✓ 已登记 $name = pid $pid（收尾跑 sweep kill $name）"
+}
+
+cmd_kill() {
+  local target="${1:?用法: sweep kill <名字|--all>}"
+  local names=()
+  if [ "$target" = "--all" ]; then
+    shopt -s nullglob
+    for f in "$DIR"/*.pid; do names+=("$(basename "$f" .pid)"); done
+  else
+    names=("$target")
+  fi
+  local n=0
+  for name in "${names[@]}"; do
+    local f="$DIR/$name.pid" pid
+    [ -f "$f" ] || { say "· $name 没登记过（sweep ls 看列表）"; continue; }
+    pid=$(cat "$f")
+    if ! alive "$pid"; then say "· $name (pid $pid) 已不在"; rm -f "$f"; continue; fi
+    if ! is_safe_target "$pid"; then
+      say "✗ $name (pid $pid) 命中护栏（我自己/祖先/sweep 自身）→ 跳过"; continue
+    fi
+    kill -TERM "$pid" 2>/dev/null
+    for _ in 1 2 3; do sleep 1; alive "$pid" || break; done
+    if alive "$pid"; then kill -KILL "$pid" 2>/dev/null; sleep 0.3; fi
+    if alive "$pid"; then say "✗ $name (pid $pid) 杀不掉（权限？）"; else
+      say "✓ $name (pid $pid) 已停"; audit "kill $name pid=$pid"; rm -f "$f"; n=$((n+1))
+    fi
+  done
+  say "共停 $n 个"
+}
+
+cmd_clean() {
+  local force=0; [ "${1:-}" = "--force" ] && force=1
+  local hits
+  hits=$(scan_hits || true)
+  if [ -f "$DIR/.scan-timeout" ]; then
+    say "✗ 扫描超时（/proc 卡死？）→ 结果不可靠，不报「干净」"
+    return 1
+  fi
+  if [ -z "$hits" ]; then say "✓ 没有扫到可疑残留"; return 0; fi
+  printf '%s\n' "$hits" | while IFS= read -r l; do say "  ! ${l:0:120}"; done
+  if [ "$force" != "1" ]; then
+    say
+    say "→ 只报告不动手（防误杀）。确认后：sweep clean --force；或先登记再杀：PID | sweep track x && sweep kill x"
+    return 1
+  fi
+  printf '%s\n' "$hits" | awk '{print $1}' | while read -r pid; do
+    is_safe_target "$pid" || { say "  · 跳过 pid=$pid（护栏）"; continue; }
+    kill -TERM "$pid" 2>/dev/null; sleep 0.5; alive "$pid" && kill -KILL "$pid" 2>/dev/null
+    audit "clean pid=$pid"; say "  ✓ 停 pid=$pid"
+  done
+  return 0
+}
+
+case "${1:-}" in
+  ls)    cmd_ls ;;
+  track) shift; cmd_track "$@" ;;
+  kill)  shift; cmd_kill "$@" ;;
+  clean) shift; cmd_clean "$@" ;;
+  *) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//' ;;
+esac

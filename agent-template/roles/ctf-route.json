@@ -1,0 +1,17 @@
+{
+  "name": "CTF 路线探索",
+  "kind": "agent",
+  "icon": "search",
+  "description": "并行试不同解法路线：每条给假设+证据+置信度（运行定义见 .pi/agents/ctf-route.md）",
+  "thinkingLevel": "high",
+  "tools": [
+    "read",
+    "bash"
+  ],
+  "skills": [
+    "ctf-kit"
+  ],
+  "id": "ctf-route",
+  "promptFile": "prompts/ctf-route.md",
+  "formatVersion": 1
+}

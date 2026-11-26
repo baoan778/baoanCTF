@@ -1,0 +1,25 @@
+# 只放工具配置，不是 Python 包（本项目 board/fgs.py 零第三方依赖，纯 stdlib）
+#
+# 为什么需要这个文件：ruff 默认会递归扫整个目录树，而 tools/knowledge/ 下是
+# **第三方公开资料**（riftx 技能库的示例脚本），它们有自己的语法风格，
+# 不是我们的代码。不排除的话 CI 会在 39 个第三方脚本上失败 ——
+# 那是「检查器扫了不该扫的东西」，不是我们的代码有问题（§4c 同类）。
+
+[tool.ruff]
+# 第三方资料/生成物，不是本项目的源码
+exclude = [
+    "tools/knowledge",      # 公开技能库与 WP（第三方）
+    "tools/vendor",         # 第三方 shim
+    "tools/ctfpoc",         # 离线 PoC 库
+    "tools/venv",
+    "tools/venv-win",
+    "vendor",
+    "work",
+    ".git",
+]
+
+[tool.ruff.lint]
+# 只查**致命级**：语法错 / 未定义名 / 死代码结构。
+# 风格问题（行宽、引号、import 排序）不查 —— 这个仓库的历史风格不统一，
+# 为了风格大面积改代码的收益远小于回归风险。
+select = ["E9", "F63", "F7", "F82"]

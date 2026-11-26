@@ -1,0 +1,9 @@
+#!/bin/bash
+# checksec：ELF 安全检查（pwnlib.checksec）
+# ★ 2026-11-13 新增包装：venv/bin 里有这个入口，但它不在容器 shell 的 PATH 上，
+#   而 skills/ 里大量写了字面命令（checksec 22 处 / z3 78 处 / ROPgadget 12 处…）。
+#   agent 照抄技能里的命令会 command not found —— 那是「文档与装备对不上」，不是缺工具。
+SELF="$0"; . "$(cd "$(dirname "$0")/../libexec" && pwd)/labenv.sh"
+BIN="$T/venv/bin/checksec"
+[ -x "$BIN" ] || lab_die "找不到 checksec（容器里应先跑 docker 构建；WSL 里先跑 install.sh）"
+exec "$BIN" "$@"

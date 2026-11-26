@@ -1,0 +1,3 @@
+FOUND_FLAG=flag{local-eval-sqli-3f9a1c}
+
+已确认：登录处 username 注入 `admin' -- ` 绕过认证，返回 `Set-Cookie: session=tok-admin-9f21`；带该 cookie 访问 `/dashboard` 逐字得到 flag。

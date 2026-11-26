@@ -1,0 +1,17 @@
+{
+  "name": "WP 写作",
+  "kind": "agent",
+  "icon": "file",
+  "description": "只在 flag 确认后：从黑板图与留档还原完整解题过程，产出可复现 WP",
+  "thinkingLevel": "low",
+  "_thinkingNote": "deepseek-flash 的 thinkingLevelMap 中 medium=null（provider 无此档），故降为 low 使其真正映射；改模型时如新模型支持 medium 可调回",
+  "tools": [
+    "read",
+    "bash",
+    "write",
+    "edit"
+  ],
+  "id": "ctf-wp",
+  "promptFile": "prompts/ctf-wp.md",
+  "formatVersion": 1
+}

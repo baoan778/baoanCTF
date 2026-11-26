@@ -1,0 +1,9 @@
+#!/bin/bash
+# pi-lab 解题链路守护 —— 包装 <仓库根>/tools/supervise.py
+# 用法: supervise [--once] [--stop] [--tick N] [--verbose]
+# 说明见 <仓库根>/tools/supervise.py 顶部（P0：parallel_solver 挂了就永久停摆）
+#
+# ★ 2026-11-19：本包装是为了让 selfcheck 的「有 CLI 入口但没包装」清干净 ——
+#   之前 supervise.py 只能在容器里用绝对路径敲，运维时容易敲错/敲不到。
+SELF="$0"; . "$(cd "$(dirname "$0")/../libexec" && pwd)/labenv.sh"
+exec "$PY" "$T/supervise.py" "$@"

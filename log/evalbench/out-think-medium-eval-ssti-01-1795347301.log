@@ -1,0 +1,7 @@
+Flag obtained directly from `{{config}}`:
+
+FOUND_FLAG=flag{local-eval-ssti-c58e12}
+
+Confirmed twice (byte-exact from two independent renders):
+- `{{config}}` → `{'FLAG': 'flag{local-eval-ssti-c58e12}'}`
+- `{{config.items()}}` → `dict_items([('FLAG', 'flag{local-eval-ssti-c58e12}')])`

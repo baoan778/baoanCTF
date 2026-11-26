@@ -1,0 +1,7 @@
+#!/bin/bash
+# pi-lab 会话安全查看器 —— 包装 tools/sesscan.py
+#   sesscan list / find / show / where / stats / --selftest
+# 为什么用它：手写脚本整读会话 JSONL 会涨到 7G → OOM；本工具逐行流式 + 上限 + 截断
+SELF="$0"; . "$(cd "$(dirname "$0")/../libexec" && pwd)/labenv.sh"
+[ -n "$PY3" ] || lab_die "找不到 python3"
+exec "$PY3" "$T/sesscan.py" "$@"

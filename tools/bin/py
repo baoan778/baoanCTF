@@ -1,0 +1,6 @@
+#!/bin/bash
+# pi-lab 专用 python：带 pwntools/z3/pycryptodome/gmpy2/capstone/unicorn 等 CTF 库
+# 解释器优先级：$PI_LAB_PYTHON → <仓库根>/tools/venv/bin/python → PATH 上的 python3
+SELF="$0"; . "$(cd "$(dirname "$0")/../libexec" && pwd)/labenv.sh"
+[ -x "$PY" ] || lab_die "找不到 python（容器里应先跑 docker 构建；WSL 里先跑 install.sh）"
+exec "$PY" "$@"

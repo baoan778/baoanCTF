@@ -1,0 +1,50 @@
+#!/bin/bash
+# pi 启动器 —— 三级回退：系统 pi → 全局 npm 包 → 包内 vendor（可选）
+#
+# ★ 2026-11-24 变更：不再依赖 vendor/pi（已从仓库移除，167MB）。
+#   原因：vendor/pi 只是**离线兜底**，install.sh 和容器都不用它
+#   （容器里是 npm i -g @earendil-works/pi-coding-agent）。
+#   开源版移除后仓库瘦 167MB，代价是首次需要联网装 pi（npm 标准做法）。
+#   如果使用者自己放了 vendor/pi（老版本包），这里仍会用它 —— 向后兼容。
+ROOT="$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)"
+
+NODE="$(command -v node || true)"
+[ -n "$NODE" ] || NODE="$ROOT/vendor/node/node"
+
+# ① 系统 PATH 上的 pi（最优先；用户自己装的就是他想要的版本）
+if command -v pi >/dev/null 2>&1; then
+  _p="$(command -v pi)"
+  # 避免递归调用自己
+  case "$_p" in
+    "$ROOT"/tools/bin/*) : ;;
+    *) exec "$_p" "$@" ;;
+  esac
+fi
+
+# ② 全局 npm 包
+for _c in \
+  "/usr/local/lib/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js" \
+  "/usr/lib/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js" \
+  "${HOME:-/root}/.npm-global/lib/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js" \
+  "${APPDATA:-}/npm/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js" \
+  "$(npm root -g 2>/dev/null)/@earendil-works/pi-coding-agent/dist/bundle/cli.js"
+do
+  [ -f "$_c" ] && exec "$NODE" "$_c" "$@"
+done
+
+# ③ 包内 vendor（可选，老版本包才带）
+if [ -f "$ROOT/vendor/pi/dist/bundle/cli.js" ]; then
+  exec "$NODE" "$ROOT/vendor/pi/dist/bundle/cli.js" "$@"
+fi
+
+cat >&2 <<'MSG'
+✗ 找不到 pi 运行时。
+
+装一个（任选其一）：
+  npm i -g @earendil-works/pi-coding-agent --registry=https://registry.npmmirror.com
+  # 或
+  bash install.sh        # 本仓库的安装脚本会装好依赖
+
+装完 pi 后在 PATH 上就能找到，本启动器会自动用它。
+MSG
+exit 127

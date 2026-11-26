@@ -1,0 +1,4 @@
+FOUND_FLAG=flag{local-eval-sqli-3f9a1c}
+
+已确认：登录处的 SQL 注入绕过（`admin'--`）会返回 `session=tok-admin-9f21`，再带着该 Cookie 访问 `/dashboard`，响应原文如下：
+`<h1>Admin dashboard</h1><p>flag: flag{local-eval-sqli-3f9a1c}</p>`

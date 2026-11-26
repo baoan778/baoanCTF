@@ -1,0 +1,9 @@
+#!/bin/bash
+# rsactf —— RsaCtfTool（源码 editable 安装进 venv）
+#   rsactf --publickey key.pub --decryptfile flag.enc --attack all
+#   rsactf --publickey key.pub --dumpkey
+SELF="$0"; . "$(cd "$(dirname "$0")/../libexec" && pwd)/labenv.sh"
+BIN="$T/venv/bin/RsaCtfTool"
+[ -x "$BIN" ] || BIN="$(command -v RsaCtfTool || true)"
+[ -n "$BIN" ] || lab_die "RsaCtfTool 没装（install.sh / 镜像构建会装到 tools/venv/bin）"
+exec "$BIN" "$@"

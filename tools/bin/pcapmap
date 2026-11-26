@@ -1,0 +1,5 @@
+#!/bin/bash
+# pcap 流量速览 —— 包装 tools/pcapmap.py
+SELF="$0"; . "$(cd "$(dirname "$0")/../libexec" && pwd)/labenv.sh"
+[ -x "$PY" ] || lab_die "找不到 python"
+exec "$PY" "$T/pcapmap.py" "$@"

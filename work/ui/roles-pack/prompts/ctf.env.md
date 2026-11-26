@@ -1,0 +1,17 @@
+## 本机工具（按当前智能体声明的能力解析，只列确实存在的）
+- ctf.board：fgs（黑板 Goal/Step/Fact）
+- ctf.kb：kb（本地知识库）
+- ctf.poc：poc / pocbomber（离线 PoC 1.1 万条）
+- reverse.static：Ghidra、IDA Pro、pycdc / pycdas、revkit（WASM / EVM / .NET 入口）
+- binary.unpack：pycdc / pycdas、pyinstxtractor、wxapkg（小程序解包）、revkit（WASM / EVM / .NET 入口）、binwalk、apktool
+- pwn.debug：gdb + gef、libcsearch、py（pwntools/z3/pycryptodome）
+- crypto.tools：py（pwntools/z3/pycryptodome）、rsactf（RsaCtfTool）
+- forensics.disk：foremost、binwalk、testdisk
+- forensics.memory：Volatility 3
+- forensics.pcap：pcapmap、tcpflow
+- stego.image：F5 / jsteg / outguess
+- web.scan：nuclei、feroxbuster、httpx / katana、wafw00f
+- web.exploit：xsstrike / dalfox / tplmap / commix、githack / svnexploit
+- osint.image：imgintel（图寻）
+- osint.web：gau / urlfinder
+- archive.crack：bkcrack

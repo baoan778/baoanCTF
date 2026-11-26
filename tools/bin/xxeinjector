@@ -1,0 +1,4 @@
+#!/bin/bash
+SELF="$0"; . "$(cd "$(dirname "$0")/../libexec" && pwd)/labenv.sh"
+cd "$T/vendor/XXEinjector" || exit 1
+exec ruby XXEinjector.rb "$@"

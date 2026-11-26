@@ -1,0 +1,31 @@
+{
+  "arm": "base-r1",
+  "n": 2,
+  "ok": 2,
+  "ok_rate": 1.0,
+  "wall_mean_s": 14.1,
+  "wall_median_s": 9.9,
+  "wall_p90_s": 18.2,
+  "cost_est_usd": 0.002961,
+  "cost_is_estimate": true,
+  "per_code": {
+    "eval-sqli-01": {
+      "n": 1,
+      "ok": 1
+    },
+    "eval-idor-01": {
+      "n": 1,
+      "ok": 1
+    }
+  },
+  "finished_at": "2026-11-22T17:17:53",
+  "model": "deepseek-v4.1-flash",
+  "budget": 120,
+  "provider": "aaa",
+  "codes": [
+    "eval-sqli-01",
+    "eval-idor-01"
+  ],
+  "repeat": 1,
+  "errors": []
+}

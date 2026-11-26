@@ -1,0 +1,21 @@
+{
+  "name": "misc 题模板",
+  "nkey": "misc",
+  "description": "杂项：编码链、隐写、pyjail 与沙箱逃逸",
+  "kind": "ctf",
+  "goal_rule": "从给定文件/服务里取出 flag 并提交回执；写清每一步解码命令与中间结果",
+  "target": "",
+  "scope": [],
+  "checks": [
+    "file/binwalk 定真实类型（后缀不可信）；压缩包看伪加密与明文攻击",
+    "编码链一路解到底（base/hex/rot/摩斯/二维码），每步留输出",
+    "图片看 LSB/EXIF/图层/像素差；音频看频谱/波形/静音段",
+    "pyjail/沙箱先列可用 builtins 与模块，找最短逃逸链"
+  ],
+  "constraints": [
+    "大文件先 head/strings/sort|uniq -c 抽样，别整读"
+  ],
+  "source": "builtin",
+  "created_at": "2026-11-17T00:00:05+00:00",
+  "updated_at": "2026-11-17T00:00:05+00:00"
+}

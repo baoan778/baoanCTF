@@ -1,0 +1,5 @@
+FOUND_FLAG=flag{local-eval-idor-7b2d40}
+
+- 已确认：`GET /note?id=2` 直接返回私有 note，即 `flag{local-eval-idor-7b2d40}`，IDOR 越权。
+- 已证伪：无（未走其他面）。
+- 还差什么：无。

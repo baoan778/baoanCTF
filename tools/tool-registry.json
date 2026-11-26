@@ -1,0 +1,1320 @@
+{
+  "version": 1,
+  "note": "机器可读的工具清单（运行期那半张表）。人读的权威说明仍是 tools/TOOLS.md。",
+  "tools": {
+    "py": {
+      "id": "py",
+      "name": "py（venv Python）",
+      "direction": "base",
+      "note": "带 pwntools/z3/pycryptodome/gmpy2/unicorn 的 Python",
+      "commands": [
+        "py"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/py",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/py",
+        "source": "PATH"
+      }
+    },
+    "python3": {
+      "id": "python3",
+      "name": "python3",
+      "direction": "base",
+      "note": "系统 Python3",
+      "commands": [
+        "python3",
+        "python3.exe",
+        "python.exe"
+      ],
+      "versionArgs": [],
+      "path": "/usr/bin/python3",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/python3",
+        "source": "PATH"
+      }
+    },
+    "node": {
+      "id": "node",
+      "name": "Node.js",
+      "direction": "base",
+      "note": "跑 .mjs 扩展与前端",
+      "commands": [
+        "node",
+        "node.exe"
+      ],
+      "versionArgs": [
+        "--version"
+      ],
+      "path": "/usr/local/bin/node",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/local/bin/node",
+        "source": "PATH"
+      }
+    },
+    "git": {
+      "id": "git",
+      "name": "git",
+      "direction": "base",
+      "note": "版本控制",
+      "commands": [
+        "git",
+        "git.exe"
+      ],
+      "versionArgs": [
+        "--version"
+      ],
+      "path": "/usr/bin/git",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/git",
+        "source": "PATH"
+      }
+    },
+    "poc": {
+      "id": "poc",
+      "name": "poc（离线 PoC 库）",
+      "direction": "base",
+      "note": "1.1 万条离线 PoC / 指纹",
+      "commands": [
+        "poc"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/poc",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/poc",
+        "source": "PATH"
+      }
+    },
+    "pocbomber": {
+      "id": "pocbomber",
+      "name": "pocbomber",
+      "direction": "base",
+      "note": "POC 批量匹配",
+      "commands": [
+        "pocbomber"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/pocbomber",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/pocbomber",
+        "source": "PATH"
+      }
+    },
+    "kb": {
+      "id": "kb",
+      "name": "kb（本地知识库）",
+      "direction": "base",
+      "note": "≈2.49 万块统一检索入口",
+      "commands": [
+        "kb"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/kb",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/kb",
+        "source": "PATH"
+      }
+    },
+    "fgs": {
+      "id": "fgs",
+      "name": "fgs（黑板内核）",
+      "direction": "base",
+      "note": "Goal/Step/Fact 黑板 + 门禁",
+      "commands": [
+        "fgs"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/fgs",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/fgs",
+        "source": "PATH"
+      }
+    },
+    "selfcheck": {
+      "id": "selfcheck",
+      "name": "selfcheck",
+      "direction": "base",
+      "note": "全套/快速自检",
+      "commands": [
+        "selfcheck"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/selfcheck",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/selfcheck",
+        "source": "PATH"
+      }
+    },
+    "skilllint": {
+      "id": "skilllint",
+      "name": "skilllint",
+      "direction": "base",
+      "note": "技能库体检",
+      "commands": [
+        "skilllint"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/skilllint",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/skilllint",
+        "source": "PATH"
+      }
+    },
+    "sesscan": {
+      "id": "sesscan",
+      "name": "sesscan",
+      "direction": "base",
+      "note": "查 pi 会话（list/find/show/where）",
+      "commands": [
+        "sesscan"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/sesscan",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/sesscan",
+        "source": "PATH"
+      }
+    },
+    "handover": {
+      "id": "handover",
+      "name": "handover",
+      "direction": "base",
+      "note": "打交接包",
+      "commands": [
+        "handover"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/handover",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/handover",
+        "source": "PATH"
+      }
+    },
+    "flagwatch": {
+      "id": "flagwatch",
+      "name": "flag-watch",
+      "direction": "base",
+      "note": "工具输出里的 flag 形状兜底告警",
+      "commands": [
+        "flagwatch"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/flagwatch",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/flagwatch",
+        "source": "PATH"
+      }
+    },
+    "lane_gate": {
+      "id": "lane_gate",
+      "name": "lane_gate",
+      "direction": "base",
+      "note": "危险命令事前闸门",
+      "commands": [
+        "lane_gate"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/lane_gate",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/lane_gate",
+        "source": "PATH"
+      }
+    },
+    "lane_guard": {
+      "id": "lane_guard",
+      "name": "lane_guard",
+      "direction": "base",
+      "note": "车道事后看门狗",
+      "commands": [
+        "lane_guard"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/lane_guard",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/lane_guard",
+        "source": "PATH"
+      }
+    },
+    "ctfsurf": {
+      "id": "ctfsurf",
+      "name": "ctfsurf",
+      "direction": "web",
+      "note": "前端 JS / 隐藏接口挖掘",
+      "commands": [
+        "ctfsurf"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/ctfsurf",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/ctfsurf",
+        "source": "PATH"
+      }
+    },
+    "authzdiff": {
+      "id": "authzdiff",
+      "name": "authzdiff",
+      "direction": "web",
+      "note": "鉴权差分探测器",
+      "commands": [
+        "authzdiff"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/authzdiff",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/authzdiff",
+        "source": "PATH"
+      }
+    },
+    "probe": {
+      "id": "probe",
+      "name": "probe",
+      "direction": "web",
+      "note": "接口探测",
+      "commands": [
+        "probe"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/probe",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/probe",
+        "source": "PATH"
+      }
+    },
+    "nuclei": {
+      "id": "nuclei",
+      "name": "nuclei",
+      "direction": "web",
+      "note": "模板化漏洞扫描",
+      "commands": [
+        "nuclei",
+        "nuclei.exe"
+      ],
+      "versionArgs": [
+        "-version"
+      ],
+      "path": "$PI_LAB_ROOT/tools/bin/nuclei",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/nuclei",
+        "source": "PATH"
+      }
+    },
+    "httpx": {
+      "id": "httpx",
+      "name": "httpx",
+      "direction": "web",
+      "note": "HTTP 批量探活/指纹",
+      "commands": [
+        "httpx",
+        "httpx.exe"
+      ],
+      "versionArgs": [
+        "-version"
+      ],
+      "path": "$PI_LAB_ROOT/tools/bin/httpx",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/httpx",
+        "source": "PATH"
+      }
+    },
+    "ffuf": {
+      "id": "ffuf",
+      "name": "ffuf",
+      "direction": "web",
+      "note": "目录/参数爆破",
+      "commands": [
+        "ffuf",
+        "ffuf.exe"
+      ],
+      "versionArgs": [
+        "-V"
+      ],
+      "path": "/usr/bin/ffuf",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/ffuf",
+        "source": "PATH"
+      }
+    },
+    "katana": {
+      "id": "katana",
+      "name": "katana",
+      "direction": "web",
+      "note": "爬虫",
+      "commands": [
+        "katana",
+        "katana.exe"
+      ],
+      "versionArgs": [
+        "-version"
+      ],
+      "path": "$PI_LAB_ROOT/tools/bin/katana",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/katana",
+        "source": "PATH"
+      }
+    },
+    "sqlmap": {
+      "id": "sqlmap",
+      "name": "sqlmap",
+      "direction": "web",
+      "note": "SQL 注入",
+      "commands": [
+        "sqlmap"
+      ],
+      "versionArgs": [
+        "--version"
+      ],
+      "path": "/usr/bin/sqlmap",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/sqlmap",
+        "source": "PATH"
+      }
+    },
+    "jwt_tool": {
+      "id": "jwt_tool",
+      "name": "jwt_tool",
+      "direction": "web",
+      "note": "JWT 测试",
+      "commands": [
+        "jwt_tool"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/jwt_tool",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/jwt_tool",
+        "source": "PATH"
+      }
+    },
+    "wafw00f": {
+      "id": "wafw00f",
+      "name": "wafw00f",
+      "direction": "web",
+      "note": "WAF 指纹",
+      "commands": [
+        "wafw00f"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/wafw00f",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/wafw00f",
+        "source": "PATH"
+      }
+    },
+    "nmap": {
+      "id": "nmap",
+      "name": "nmap",
+      "direction": "base",
+      "note": "端口/服务扫描",
+      "commands": [
+        "nmap",
+        "nmap.exe"
+      ],
+      "versionArgs": [
+        "--version"
+      ],
+      "path": "/usr/bin/nmap",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/nmap",
+        "source": "PATH"
+      }
+    },
+    "masscan": {
+      "id": "masscan",
+      "name": "masscan",
+      "direction": "base",
+      "note": "快速端口扫描",
+      "commands": [
+        "masscan"
+      ],
+      "versionArgs": [
+        "--version"
+      ],
+      "path": "$PI_LAB_ROOT/tools/bin/masscan",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/masscan",
+        "source": "PATH"
+      }
+    },
+    "naabu": {
+      "id": "naabu",
+      "name": "naabu",
+      "direction": "base",
+      "note": "端口扫描（Go）",
+      "commands": [
+        "naabu"
+      ],
+      "versionArgs": [
+        "-version"
+      ],
+      "path": "$PI_LAB_ROOT/tools/bin/naabu",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/naabu",
+        "source": "PATH"
+      }
+    },
+    "pwnkit": {
+      "id": "pwnkit",
+      "name": "pwnkit",
+      "direction": "pwn",
+      "note": "pwn 一键侦察/利用台",
+      "commands": [
+        "pwnkit"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/pwnkit",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/pwnkit",
+        "source": "PATH"
+      }
+    },
+    "pggdb": {
+      "id": "pggdb",
+      "name": "pggdb（gdb+gef）",
+      "direction": "pwn",
+      "note": "调试器（本机没有 pwndbg）",
+      "commands": [
+        "pggdb"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/pggdb",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/pggdb",
+        "source": "PATH"
+      }
+    },
+    "pwnsetup": {
+      "id": "pwnsetup",
+      "name": "pwnsetup",
+      "direction": "pwn",
+      "note": "libc 环境准备（tools/pwnsetup.sh，无 bin 包装：make-bin.sh 不挂它）",
+      "commands": [],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/pwnsetup.sh",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "operator-2026-10-30"
+    },
+    "libcsearch": {
+      "id": "libcsearch",
+      "name": "libcsearch",
+      "direction": "pwn",
+      "note": "libc 版本检索",
+      "commands": [
+        "libcsearch"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/libcsearch",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/libcsearch",
+        "source": "PATH"
+      }
+    },
+    "revkit": {
+      "id": "revkit",
+      "name": "revkit",
+      "direction": "reverse",
+      "note": "逆向三块能力一个入口",
+      "commands": [
+        "revkit"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/revkit",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/revkit",
+        "source": "PATH"
+      }
+    },
+    "ida": {
+      "id": "ida",
+      "name": "IDA Pro（Windows 侧）",
+      "direction": "reverse",
+      "note": "走 WSL interop 调 Windows IDA",
+      "commands": [
+        "ida"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/ida",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/ida",
+        "source": "PATH"
+      }
+    },
+    "ghidra": {
+      "id": "ghidra",
+      "name": "Ghidra（Windows 侧）",
+      "direction": "reverse",
+      "note": "同上",
+      "commands": [
+        "ghidra"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/ghidra",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/ghidra",
+        "source": "PATH"
+      }
+    },
+    "rsactf": {
+      "id": "rsactf",
+      "name": "rsactf",
+      "direction": "crypto",
+      "note": "RSA 迭代台",
+      "commands": [
+        "rsactf"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/rsactf",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/rsactf",
+        "source": "PATH"
+      }
+    },
+    "vol": {
+      "id": "vol",
+      "name": "volatility3",
+      "direction": "forensics",
+      "note": "内存取证（vol 语法）",
+      "commands": [
+        "vol"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/vol",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/vol",
+        "source": "PATH"
+      }
+    },
+    "binwalk": {
+      "id": "binwalk",
+      "name": "binwalk",
+      "direction": "forensics",
+      "note": "固件/镜像拆包",
+      "commands": [
+        "binwalk"
+      ],
+      "versionArgs": [
+        "--version"
+      ],
+      "path": "/usr/bin/binwalk",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/binwalk",
+        "source": "PATH"
+      }
+    },
+    "foremost": {
+      "id": "foremost",
+      "name": "foremost",
+      "direction": "forensics",
+      "note": "文件雕刻",
+      "commands": [
+        "foremost"
+      ],
+      "versionArgs": [
+        "-V"
+      ],
+      "path": "$PI_LAB_ROOT/tools/bin/foremost",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/foremost",
+        "source": "PATH"
+      }
+    },
+    "exiftool": {
+      "id": "exiftool",
+      "name": "ExifTool",
+      "direction": "forensics",
+      "note": "元数据（不认 --version）",
+      "commands": [
+        "exiftool"
+      ],
+      "versionArgs": [
+        "-ver"
+      ],
+      "path": "/usr/bin/exiftool",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/exiftool",
+        "source": "PATH"
+      }
+    },
+    "tcpflow": {
+      "id": "tcpflow",
+      "name": "tcpflow",
+      "direction": "forensics",
+      "note": "流量重组",
+      "commands": [
+        "tcpflow"
+      ],
+      "versionArgs": [
+        "-h"
+      ],
+      "path": "/usr/bin/tcpflow",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/tcpflow",
+        "source": "PATH"
+      }
+    },
+    "testdisk": {
+      "id": "testdisk",
+      "name": "testdisk",
+      "direction": "forensics",
+      "note": "分区/文件恢复",
+      "commands": [
+        "testdisk"
+      ],
+      "versionArgs": [],
+      "path": "/usr/bin/testdisk",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/testdisk",
+        "source": "PATH"
+      }
+    },
+    "unsquashfs": {
+      "id": "unsquashfs",
+      "name": "unsquashfs",
+      "direction": "forensics",
+      "note": "squashfs 解包",
+      "commands": [
+        "unsquashfs"
+      ],
+      "versionArgs": [
+        "-version"
+      ],
+      "path": "/usr/bin/unsquashfs",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/unsquashfs",
+        "source": "PATH"
+      }
+    },
+    "ffmpeg": {
+      "id": "ffmpeg",
+      "name": "ffmpeg",
+      "direction": "misc",
+      "note": "音视频处理",
+      "commands": [
+        "ffmpeg",
+        "ffmpeg.exe"
+      ],
+      "versionArgs": [
+        "-version"
+      ],
+      "path": "/usr/bin/ffmpeg",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/ffmpeg",
+        "source": "PATH"
+      }
+    },
+    "sox": {
+      "id": "sox",
+      "name": "sox",
+      "direction": "misc",
+      "note": "音频处理",
+      "commands": [
+        "sox"
+      ],
+      "versionArgs": [
+        "--version"
+      ],
+      "path": "/usr/bin/sox",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/sox",
+        "source": "PATH"
+      }
+    },
+    "mediainfo": {
+      "id": "mediainfo",
+      "name": "mediainfo",
+      "direction": "misc",
+      "note": "媒体信息",
+      "commands": [
+        "mediainfo"
+      ],
+      "versionArgs": [
+        "--Version"
+      ],
+      "path": "/usr/bin/mediainfo",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/mediainfo",
+        "source": "PATH"
+      }
+    },
+    "multimon-ng": {
+      "id": "multimon-ng",
+      "name": "multimon-ng",
+      "direction": "misc",
+      "note": "无线/DTMF 解码",
+      "commands": [
+        "multimon-ng"
+      ],
+      "versionArgs": [],
+      "path": "/usr/bin/multimon-ng",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/multimon-ng",
+        "source": "PATH"
+      }
+    },
+    "pdftotext": {
+      "id": "pdftotext",
+      "name": "pdftotext",
+      "direction": "misc",
+      "note": "PDF 取文",
+      "commands": [
+        "pdftotext"
+      ],
+      "versionArgs": [
+        "-v"
+      ],
+      "path": "/usr/bin/pdftotext",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/pdftotext",
+        "source": "PATH"
+      }
+    },
+    "qpdf": {
+      "id": "qpdf",
+      "name": "qpdf",
+      "direction": "misc",
+      "note": "PDF 结构",
+      "commands": [
+        "qpdf"
+      ],
+      "versionArgs": [
+        "--version"
+      ],
+      "path": "/usr/bin/qpdf",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/qpdf",
+        "source": "PATH"
+      }
+    },
+    "mutool": {
+      "id": "mutool",
+      "name": "mutool",
+      "direction": "misc",
+      "note": "PDF 工具集",
+      "commands": [
+        "mutool"
+      ],
+      "versionArgs": [
+        "-v"
+      ],
+      "path": "/usr/bin/mutool",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/mutool",
+        "source": "PATH"
+      }
+    },
+    "apktool": {
+      "id": "apktool",
+      "name": "apktool",
+      "direction": "reverse",
+      "note": "APK 反编译",
+      "commands": [
+        "apktool",
+        "apktool.bat"
+      ],
+      "versionArgs": [
+        "--version"
+      ],
+      "path": "/usr/bin/apktool",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/apktool",
+        "source": "PATH"
+      }
+    },
+    "java": {
+      "id": "java",
+      "name": "java",
+      "direction": "reverse",
+      "note": "跑 apktool/jadx",
+      "commands": [
+        "java",
+        "java.exe"
+      ],
+      "versionArgs": [
+        "-version"
+      ],
+      "path": "/usr/bin/java",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/java",
+        "source": "PATH"
+      }
+    },
+    "bkcrack": {
+      "id": "bkcrack",
+      "name": "bkcrack",
+      "direction": "misc",
+      "note": "ZipCrypto 明文攻击",
+      "commands": [
+        "bkcrack"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/bkcrack",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/bkcrack",
+        "source": "PATH"
+      }
+    },
+    "jsteg": {
+      "id": "jsteg",
+      "name": "jsteg",
+      "direction": "misc",
+      "note": "JPEG 隐写",
+      "commands": [
+        "jsteg"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/jsteg",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/jsteg",
+        "source": "PATH"
+      }
+    },
+    "outguess": {
+      "id": "outguess",
+      "name": "outguess",
+      "direction": "misc",
+      "note": "JPEG 隐写",
+      "commands": [
+        "outguess"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/outguess",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/outguess",
+        "source": "PATH"
+      }
+    },
+    "f5": {
+      "id": "f5",
+      "name": "f5",
+      "direction": "misc",
+      "note": "JPEG 隐写（F5）",
+      "commands": [
+        "f5"
+      ],
+      "versionArgs": [],
+      "path": "$PI_LAB_ROOT/tools/bin/f5",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "$PI_LAB_ROOT/tools/bin/f5",
+        "source": "PATH"
+      }
+    },
+    "jq": {
+      "id": "jq",
+      "name": "jq",
+      "direction": "base",
+      "note": "JSON 处理",
+      "commands": [
+        "jq",
+        "jq.exe"
+      ],
+      "versionArgs": [
+        "--version"
+      ],
+      "path": "/usr/bin/jq",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/jq",
+        "source": "PATH"
+      }
+    },
+    "yara": {
+      "id": "yara",
+      "name": "yara",
+      "direction": "forensics",
+      "note": "YARA 规则",
+      "commands": [
+        "yara"
+      ],
+      "versionArgs": [
+        "--version"
+      ],
+      "path": "/usr/bin/yara",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/yara",
+        "source": "PATH"
+      }
+    },
+    "strace": {
+      "id": "strace",
+      "name": "strace",
+      "direction": "reverse",
+      "note": "系统调用跟踪",
+      "commands": [
+        "strace"
+      ],
+      "versionArgs": [
+        "--version"
+      ],
+      "path": "/usr/bin/strace",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/strace",
+        "source": "PATH"
+      }
+    },
+    "ltrace": {
+      "id": "ltrace",
+      "name": "ltrace",
+      "direction": "reverse",
+      "note": "库调用跟踪",
+      "commands": [
+        "ltrace"
+      ],
+      "versionArgs": [],
+      "path": "/usr/bin/ltrace",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/ltrace",
+        "source": "PATH"
+      }
+    },
+    "patchelf": {
+      "id": "patchelf",
+      "name": "patchelf",
+      "direction": "pwn",
+      "note": "改 ELF（interp/rpath）",
+      "commands": [
+        "patchelf"
+      ],
+      "versionArgs": [
+        "--version"
+      ],
+      "path": "/usr/bin/patchelf",
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "seed",
+      "lastFound": {
+        "at": "2026-10-12T15:53:28+0800",
+        "path": "/usr/bin/patchelf",
+        "source": "PATH"
+      }
+    },
+    "gau": {
+      "id": "gau",
+      "name": "gau",
+      "direction": "osint",
+      "note": "取历史 URL（Wayback/CommonCrawl/OTX/urlscan）—— osint.web 能力提供者",
+      "commands": [
+        "gau"
+      ],
+      "versionArgs": [
+        "--version"
+      ],
+      "path": null,
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "operator-2026-11-01"
+    },
+    "urlfinder": {
+      "id": "urlfinder",
+      "name": "urlfinder",
+      "direction": "osint",
+      "note": "ProjectDiscovery URL 发现（osint.web 能力提供者）",
+      "commands": [
+        "urlfinder"
+      ],
+      "versionArgs": [
+        "-version"
+      ],
+      "path": null,
+      "pythonImport": null,
+      "nodeModule": null,
+      "capabilities": [],
+      "registeredBy": "operator-2026-11-01"
+    }
+  }
+}

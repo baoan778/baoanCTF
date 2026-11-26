@@ -1,0 +1,3 @@
+FOUND_FLAG=flag{local-eval-sqli-3f9a1c}
+
+Confirmed: `/login` POST is SQLi-vulnerable (`username=admin'--` → 302 with session `tok-admin-9f21`); `/dashboard` with that cookie returns the flag verbatim.

@@ -1,0 +1,9 @@
+#!/bin/bash
+# pi-lab pwn 常备工具 —— 包装 tools/pwnkit.py
+#   pwnkit reach <host> <port>         解析+TCP+读 banner
+#   pwnkit info <bin>                  架构/保护/关键符号
+#   pwnkit fmt probe --host H --port P 探测 format string arg 偏移
+#   pwnkit --selftest
+SELF="$0"; . "$(cd "$(dirname "$0")/../libexec" && pwd)/labenv.sh"
+[ -x "$PY" ] || lab_die "找不到 python"
+exec "$PY" "$T/pwnkit.py" "$@"

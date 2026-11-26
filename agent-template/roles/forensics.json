@@ -1,0 +1,24 @@
+{
+  "name": "数字取证",
+  "kind": "role",
+  "icon": "db",
+  "description": "镜像 / 日志 / 内存：提取 → 关联 → 出可复核报告",
+  "tools": null,
+  "capabilities": [
+    "ctf.board",
+    "ops.safety",
+    "archive.extract",
+    "archive.crack",
+    "forensics.disk",
+    "forensics.memory",
+    "forensics.pcap",
+    "stego.image",
+    "malware.scan",
+    "media.convert",
+    "binary.unpack"
+  ],
+  "contextFiles": true,
+  "id": "forensics",
+  "promptFile": "prompts/forensics.md",
+  "formatVersion": 1
+}

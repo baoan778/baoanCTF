@@ -1,0 +1,23 @@
+{
+  "name": "PiCTF 助手",
+  "kind": "role",
+  "icon": "robot",
+  "description": "默认起点：不预设方向，用 pi 的全部能力",
+  "tools": null,
+  "contextFiles": true,
+  "id": "assistant",
+  "promptFile": "prompts/assistant.md",
+  "formatVersion": 1,
+  "capabilities": [
+    "ctf.board",
+    "ctf.kb",
+    "env.tools",
+    "ops.session",
+    "filesystem.search",
+    "script.run",
+    "archive.extract",
+    "net.download",
+    "web.search",
+    "web.fetch"
+  ]
+}

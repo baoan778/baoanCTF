@@ -1,0 +1,3 @@
+FOUND_FLAG=flag{local-eval-sqli-3f9a1c}
+
+登录处 SQL 注入：`username=admin' --` 绕过认证，返回 `session=tok-admin-9f21`；用该会话请求 `/dashboard` 直接回显 flag。

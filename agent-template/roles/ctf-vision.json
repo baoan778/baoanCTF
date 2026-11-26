@@ -1,0 +1,13 @@
+{
+  "name": "视觉识别",
+  "kind": "agent",
+  "icon": "image",
+  "description": "看图：人物/物件/场景/文字，产出可检索语义清单（OSINT 图寻、杂项题用）",
+  "thinkingLevel": "medium",
+  "tools": [
+    "read"
+  ],
+  "id": "ctf-vision",
+  "promptFile": "prompts/ctf-vision.md",
+  "formatVersion": 1
+}

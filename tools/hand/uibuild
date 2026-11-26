@@ -1,0 +1,106 @@
+#!/bin/bash
+# uibuild —— 重建 webUI 前端产物并回填宿主（work/ui/web/dist，git 跟踪）
+#
+# 为什么需要它（★ 2026-11-18）：
+#   compose 把 dist **只读**挂进容器（宿主 git 那份 = 容器实际跑的那份），
+#   所以容器里不能直接 vite build 写 dist。重建只能「构建到可写目录 → 校验 → 回填宿主」。
+#
+# 用法：
+#   uibuild             重建并回填（node_modules 缺失时自动 npm install）
+#   uibuild --install   强制先 npm install（改了 package.json 后用）
+#   uibuild --check     只判断 dist 有没有落后于源码；落后退 1（selfcheck 用同一判据）
+set -uo pipefail
+
+SELF="$0"
+LAB="$(cd "$(dirname "$SELF")/../.." && pwd)"
+UI="$LAB/work/ui/web"
+CT="${PICTF_CONTAINER:-pictf}"
+STG="$LAB/.uibuild-staging"
+MODE="build"
+
+for a in "$@"; do
+  case "$a" in
+    --install) MODE="install" ;;
+    --check)   MODE="check" ;;
+    -h|--help) sed -n '2,12p' "$SELF" | sed 's/^# \?//'; exit 0 ;;
+    *) echo "[uibuild] 不认识的参数: $a（可用：--install / --check）" >&2; exit 2 ;;
+  esac
+done
+
+[ -f "$UI/index.html" ] || { echo "[uibuild] 找不到 $UI —— 仓库根算错了？" >&2; exit 1; }
+
+# ── dist 是否落后于源码（与 selfcheck 第 2 节同一判据）────────────────────
+if [ "$MODE" = "check" ]; then
+  if [ ! -f "$UI/dist/index.html" ]; then
+    echo "[uibuild] dist/index.html 不存在 —— 必须重建"; exit 1
+  fi
+  _dts=$(stat -c %Y "$UI/dist/index.html")
+  _stale=""
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    _ts=$(stat -c %Y "$f" 2>/dev/null) || continue
+    [ "$_ts" -gt $((_dts + 2)) ] && _stale="$_stale $(printf '%s' "$f" | sed "s|.*/web/||")"
+  done < <(find "$UI/src" "$UI/index.html" "$UI/package.json" "$UI/vite.config.ts" -type f 2>/dev/null)
+  if [ -n "$_stale" ]; then
+    echo "[uibuild] dist 比源码旧:$_stale"; exit 1
+  fi
+  echo "[uibuild] dist 不落后于源码"; exit 0
+fi
+
+command -v docker >/dev/null 2>&1 || { echo "[uibuild] 没有 docker —— 构建只能在容器里跑" >&2; exit 1; }
+
+# 暂存区在宿主：构建产物先落这里，校验通过才换 dist（失败时宿主 dist 一个字节不动）
+rm -rf "$STG"; mkdir -p "$STG/dist"
+
+BUILD_ARGS="--out /tmp/uibuild-dist"
+[ "$MODE" = "install" ] && BUILD_ARGS="$BUILD_ARGS --install"
+
+RUNNING=0
+if [ "$(docker inspect -f '{{.State.Running}}' "$CT" 2>/dev/null)" = "true" ]; then
+  RUNNING=1
+fi
+
+if [ "$RUNNING" = "1" ]; then
+  echo "[uibuild] 在运行中的容器 $CT 里构建"
+  docker exec "$CT" bash -c "cd /opt/pi-ctf/work/ui/web && bash ../build.sh $BUILD_ARGS" 2>&1 | tail -8
+  rc=${PIPESTATUS[0]}
+  [ "$rc" = "0" ] || { echo "[uibuild] 构建失败（rc=$rc）—— 宿主 dist 未动" >&2; rm -rf "$STG"; exit 1; }
+  MSYS_NO_PATHCONV=1 docker cp "$CT:/tmp/uibuild-dist/." "$STG/dist/" >/dev/null 2>&1 \
+    || MSYS_NO_PATHCONV=1 docker cp "$CT:/tmp/uibuild-dist/." "$STG/dist/"
+else
+  # ★ 不要「用镜像起个临时容器来构建」这个偷懒办法 —— 2026-11-18 实测它有害：
+  #   镜像里的 work/ui/web/src 是**建镜像那一刻**的快照（实测还是 11-05 的 App.tsx），
+  #   临时容器又只 bind 了暂存区、没 bind 宿主源码，于是它老老实实构建出**老 bundle**
+  #   （实测产出 index-Dm7O1sLd.js，带已删的口令闸门），而且看起来一切正常。
+  #   这正是本工具要消灭的那类漂移，所以这里直接拒绝，让调用方先把容器起来。
+  echo "[uibuild] 容器 $CT 没在跑 —— 构建必须在**挂着宿主源码的容器**里跑。" >&2
+  echo "           临时容器只有镜像里的旧源码，会构建出旧前端（这正是要防的漂移）。" >&2
+  echo "           先起容器：docker compose up -d pictf" >&2
+  rm -rf "$STG"; exit 1
+fi
+
+# ── 校验（不过就不换）──────────────────────────────────────────────────
+_ref=$(grep -o 'assets/[A-Za-z0-9._-]*\.js' "$STG/dist/index.html" 2>/dev/null | head -1)
+if [ -z "$_ref" ] || [ ! -s "$STG/dist/$_ref" ]; then
+  echo "[uibuild] 校验失败：暂存区 index.html 没有可用 JS 入口（${_ref:-无}）—— 宿主 dist 未动" >&2
+  rm -rf "$STG"; exit 1
+fi
+_sz=$(stat -c %s "$STG/dist/$_ref")
+if [ "$_sz" -lt 50000 ]; then
+  echo "[uibuild] 校验失败：$_ref 只有 $_sz 字节（应 >50KB）—— 宿主 dist 未动" >&2
+  rm -rf "$STG"; exit 1
+fi
+
+# ── 回填：清空 dist 内容但保留目录本身（bind mount 认 inode）──────────
+[ -d "$UI/dist" ] || mkdir -p "$UI/dist"
+find "$UI/dist" -mindepth 1 -delete 2>/dev/null || rm -rf "$UI/dist"
+[ -d "$UI/dist" ] || mkdir -p "$UI/dist"
+cp -a "$STG/dist"/. "$UI/dist"/
+rm -rf "$STG"
+
+_new=$(grep -o 'assets/[A-Za-z0-9._-]*\.js' "$UI/dist/index.html" | head -1)
+if [ "$_new" != "$_ref" ]; then
+  echo "[uibuild] 回填后校验不一致（$_ref != $_new）—— 请重跑一次" >&2; exit 1
+fi
+echo "[uibuild] ✓ 完成 → work/ui/web/dist（$_ref, $_sz 字节）"
+echo "[uibuild] 容器在跑的话刷新页面即可（dist 是只读挂载，内容已随宿主更新）"

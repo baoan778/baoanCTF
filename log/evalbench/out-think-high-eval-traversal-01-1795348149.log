@@ -1,0 +1,5 @@
+FOUND_FLAG=flag{local-eval-traversal-4d90ab}
+
+- 已确认：`/file?name=` 存在路径穿越，`../../../../../../tmp/flag.txt` 逐字返回 `flag{local-eval-traversal-4d90ab}`（od 校验，仅尾部换行）。
+- 已证伪：`/flag`、`/root/flag*`、`/var/www/flag*` 等常见落点均不存在。
+- 还差什么：无，flag 已取证。

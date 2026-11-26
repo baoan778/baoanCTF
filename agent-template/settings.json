@@ -1,0 +1,118 @@
+{
+  "theme": "dark",
+  "defaultProvider": "deepseek",
+  "defaultModel": "deepseek-flash",
+  "packages": [
+    "npm:pi-subagents",
+    "npm:pi-web-access@0.46.0"
+  ],
+  "subagents": {
+    "maxThinking": "max",
+    "defaultModel": "deepseek/deepseek-flash",
+    "modelScope": {
+      "enforce": true,
+      "strict": true,
+      "allow": [
+        "inherit",
+        "deepseek/deepseek-flash",
+        "deepseek/deepseek-v4-pro",
+        "ctf/text",
+        "ctf/vision"
+      ]
+    },
+    "agentOverrides": {
+      "ctf-recon": {
+        "model": "deepseek/deepseek-flash",
+        "thinking": "low"
+      },
+      "ctf-vision": {
+        "model": "deepseek/deepseek-flash",
+        "_note": "★ 2026-11-14 修 P3：原为 low，与 roles/ctf-vision.json 声明的 medium 不一致，按唯一真源对齐。",
+        "thinking": "medium"
+      },
+      "ctf-wp": {
+        "model": "deepseek/deepseek-flash",
+        "thinking": "low"
+      },
+      "assistant": {
+        "model": "deepseek/deepseek-flash",
+        "thinking": "low"
+      },
+      "ctf-route": {
+        "model": "deepseek/deepseek-flash",
+        "thinking": "high"
+      },
+      "ctf-verify": {
+        "model": "deepseek/deepseek-flash",
+        "_note": "★ 2026-11-14 修 P3：原为 high，与 roles/ctf-verify.json 声明的 max 不一致。独立复核角色少一档思考就是少一层攻击，按唯一真源（roles/*.json）对齐。",
+        "thinking": "max"
+      },
+      "ctf": {
+        "model": "deepseek/deepseek-flash",
+        "thinking": "high"
+      },
+      "ir": {
+        "model": "deepseek/deepseek-flash",
+        "thinking": "high"
+      },
+      "forensics": {
+        "model": "deepseek/deepseek-flash",
+        "thinking": "high"
+      },
+      "general": {
+        "model": "deepseek/deepseek-v4-pro",
+        "thinking": "max"
+      }
+    },
+    "tierRule": {
+      "_note": "三档按实测可用模型划分。scout=杂活低思考，worker=常规攻坚，general=已卡死题才升。",
+      "_caution": "★ tierRule 是**给人看的说明**，pi-subagents 不读它；真正生效的只有每个 agentOverrides 条目里的 model + thinking。2026-11-19 起本文件不再写 \"tier\" 字段（原来 10 条 override 各写了一个，纯死字段：pi-subagents 的 parseBuiltinOverrideEntry 只认 18 个键，tier 不在其中，未知键静默忽略）。★ 下面三行现在是**机器对账**的：board/tests/test_tier_rule.py 会拿这里的 model/thinking/agents 与 agentOverrides 实际值逐条核，改一边不改另一边就红。",
+      "scout": {
+        "model": "deepseek/deepseek-flash",
+        "thinking": [
+          "low",
+          "medium"
+        ],
+        "agents": [
+          "ctf-recon",
+          "ctf-vision",
+          "ctf-wp",
+          "assistant"
+        ],
+        "why": "侦察/看图/写WP/闲聊：同型号靠低 thinking 省钱。ctf-vision 要 medium（看图比读文本吃推理），其余 low。"
+      },
+      "worker": {
+        "model": "deepseek/deepseek-flash",
+        "thinking": [
+          "high",
+          "max"
+        ],
+        "agents": [
+          "ctf-route",
+          "ctf-verify",
+          "ctf",
+          "ir",
+          "forensics"
+        ],
+        "why": "常规攻坚：同型号靠 thinking 买深度，单价不变。ctf-verify 要 max（独立复核少一档思考就是少一层攻击）。"
+      },
+      "general": {
+        "model": "deepseek/deepseek-v4-pro",
+        "thinking": [
+          "max"
+        ],
+        "agents": [
+          "general"
+        ],
+        "why": "仅已卡死题启用，单价 1.32/3.96（flash 的 4.4x），同时最多 1 路。"
+      },
+      "gate": "general 只允许由「已耗时 >=20min 且有 dry_streak」触发，机器不自动升档（这条是纪律，不是代码）"
+    }
+  },
+  "compaction": {
+    "enabled": true,
+    "_note": "★ 2026-11-23 实测：contextWindow=1M 时用默认 reserveTokens(16384) 意味着阈值 98 万，而实测峰值仅 17 万 → 压缩**永不触发** → 每轮重发全部历史（实测输入/输出比 27.4:1，中位 44:1）。这里把 reserveTokens 调到让阈值≈16 万。探针实测已确认压缩事件会真的出现。",
+    "reserveTokens": 840000,
+    "keepRecentTokens": 20000
+  }
+}

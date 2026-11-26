@@ -1,0 +1,73 @@
+# 扩展（misc/取证/图片/内存；可缺）
+unicorn
+capstone
+pillow
+pyzbar
+zxing-cpp
+volatility3
+yara-python
+# ── selfcheck「py 弹药」清单里点名要的（缺一个就 warn，故一次装齐）──
+beautifulsoup4
+ecdsa
+ropgadget
+pyyaml
+
+# ── selfcheck 7/9「盲区能力」点名缺的（wasm / .NET / EVM）──
+wasmtime
+pywasm
+pyevmasm
+eth-utils
+dnfile
+dncil
+
+# ── md2docx 依赖（selfcheck 工具实跑点名崩：ModuleNotFoundError: docx）──
+python-docx
+
+# ── 2026-11-19：reflect 实测点名缺的（xben-101 的图片题要 cv2）──────────────
+#   用 headless 版：容器没有 X11，完整 opencv-python 会拉一堆 GUI 依赖。
+#   numpy 跟着它装（镜像构建断言里会 import numpy）。
+opencv-python-headless
+
+# ── 2026-11-19：CTF web 必备、但之前谁都没列进 requirements ──────────────────
+#   来历：给 Dockerfile ⑥·1b 加「.pth 生效」的断言时，断言 import 了
+#   jinja2/lxml/numpy/flask —— 结果**构建直接失败**（No module named 'jinja2'）。
+#   排查发现不是 .pth 的问题：这三个包在**镜像层里根本不存在**，
+#   只有运行中的容器里手工 pip 装过（/opt/pi-ctf/tools/venv 是 named volume，
+#   会盖住镜像层的内容），于是「本地能用、重建就丢」。
+#   它们不是可有可无的装饰：
+#     · flask + jinja2 —— SSTI 的 payload 要本地先验（模板渲染行为随版本变），
+#       flask session cookie 的签名/解签也要它；提示词里 tools/flask-session.py 就依赖
+#     · lxml —— XXE / 大型 XML 解析，标准库 xml.etree 对付不了命名空间与 XPath
+flask
+jinja2
+lxml
+
+# ── sage（crypto 大格/Coppersmith/离散对数）★ 2026-11-04 ────────────────────
+#   Ubuntu 24.04(noble) **已经没有 sagemath 包**（apt-cache policy → Candidate: none，
+#   只剩 sagemath-database-* 数据包）。pip 上的 sagemath-standard 10.7 源码包要
+#   现场编译 ~10 万行 Cython，在容器里不现实。
+#   可用的路是 passagemath（sagemath 的 modular 发行版，纯 manylinux 轮子，不编译）。
+#   ★ 「全量」装不上：passagemath-standard 依赖 python <3.12，与容器 3.12 冲突
+#     （实测 ResolutionImpossible）。所以显式列模块，别写 passagemath-standard。
+#   装完由 docker/sage-shim.sh 生成 sage.all / sage.all_cmdline —— 这两个是 sage
+#   的「全量命名空间」，passagemath 各模块只提供 sage.all__sagemath_<模块>，
+#   缺了它 `from sage.all import *` 与 `sage` 命令行都不工作（实测）。
+passagemath-repl
+passagemath-objects
+passagemath-categories
+passagemath-modules
+passagemath-schemes
+passagemath-symbolics
+passagemath-singular
+passagemath-pari
+passagemath-flint
+passagemath-ntl
+passagemath-polyhedra
+passagemath-glpk
+passagemath-gsl
+
+# ── DB / cache 客户端（R5-C 2026-11-21）────────────────────────────────────
+#   实测缺 pymysql / redis：mysql/redis 类题只能靠 CLI 或手拼 socket。
+#   与 apt 的 mariadb-client / redis-tools 配套：CLI 负责交互，库负责脚本批量。
+PyMySQL
+redis

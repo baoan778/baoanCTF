@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  # ★ 2026-11-24：Windows 与 Linux 都跑。
+  #   理由：本项目的头号 bug 来源就是「同一份代码在 Windows 和 Linux 行为不同」
+  #   —— 实测踩过：裸名 bash 在 Windows 命中 System32 的 WSL 存根、MSYS 与 Git Bash
+  #   对嵌套引号的解析不同、路径反斜杠被转义吃掉。只跑 linux 的 CI 拦不住这些。
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    # ★ 2026-11-25：Windows 上 Python 的 stdout 默认是 cp1252，打印中文直接
+    #   UnicodeEncodeError: 'charmap' codec can't encode ...（实测 9 个测试因此红）。
+    #   这两个环境变量是 Windows Python 的标准解法：强制 UTF-8 进出。
+    #   本地一直靠 shell 里 export PYTHONIOENCODING=utf-8，CI 必须显式写。
+    env:
+      PYTHONIOENCODING: utf-8
+      PYTHONUTF8: "1"
+    # ★ 2026-11-25：Windows runner 默认用 **PowerShell**，而本 workflow 的 run 全是 bash 语法
+    #   （for 循环、$(basename)、test -f）。实测 Windows 上直接报 ParserError 挂在第一步。
+    #   统一指定 bash —— 两个平台跑同一套脚本，这也符合「同一份代码两平台行为要一致」的初衷。
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 语法检查（ruff 致命级）
+        # 规则与排除项在 pyproject.toml（本地跑 ruff 与 CI 一致）。
+        # ★ 2026-11-25：原来这里写的是「先 `|| true` 跑一遍再真跑一遍」，
+        #   而规则硬编码在命令行、**排除了谁却没写** —— 于是 ruff 递归扫到
+        #   tools/knowledge/riftx/ 的第三方示例脚本，39 个语法错全部来自那里，
+        #   两个平台都红。第三方资料不是我们的代码，应在配置里排除。
+        run: |
+          pip install ruff
+          ruff check board tools
+
+      - name: shell 体检（语法 + set -u 未定义变量）
+        run: python3 tools/lint_sh.py
+
+      - name: 测试数量与文档一致
+        run: python3 tools/testcount.py --check
+
+      - name: 回归测试（150 条，并行跑）
+        run: |
+          fail=0
+          for t in board/tests/test_*.py; do
+            name=$(basename "$t")
+            if timeout 300 python3 "$t" > /tmp/"$name".log 2>&1; then
+              echo "PASS $name"
+            else
+              rc=$?
+              if [ "$rc" = "77" ]; then
+                echo "SKIP $name（发布包形态跳过）"
+              else
+                echo "FAIL $name"
+                # ★ 2026-11-25：原来只 `tail -20` —— 而多数测试的失败断言在**中间**，
+                #   最后 20 行全是后面的通过项，真实原因被截掉了（排查时白等 3 轮 CI）。
+                #   改成：先打全部 ✗ / 异常行，再补最后 10 行看上下文。
+                grep -E '✗|Traceback|Error|error:' /tmp/"$name".log | head -30 || true
+                echo "--- 末尾 10 行 ---"
+                tail -10 /tmp/"$name".log
+                fail=1
+              fi
+            fi
+          done
+          exit $fail
+
+      - name: 交付物完整性
+        run: |
+          for f in README.md LICENSE CONTRIBUTING.md SECURITY.md NOTICE CHANGELOG.md .gitattributes; do
+            test -f "$f" || { echo "缺少 $f"; exit 1; }
+          done
+          echo "交付物齐全"
+
+      - name: 密钥泄漏扫描
+        # ★ 2026-11-24：从 inline grep 抽成 tools/secret-scan.sh。
+        #   原因：那个 grep 的**模式串本身**含 "-----BEGIN ... PRIVATE KEY-----"，
+        #   扫自己时自匹配 —— git 历史扫描与 GitHub secret scanning 都会报它。
+        #   现在模式串只在一个文件里，且那个文件把自己排除在扫描范围外。
+        run: bash tools/secret-scan.sh

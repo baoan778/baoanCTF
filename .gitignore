@@ -1,0 +1,175 @@
+# 密钥 / 本机配置（绝不入库）
+.env
+.env.*
+!.env.example
+*.bak-mswitch
+**/*.bak-*
+
+# 运行时产物
+workspace/
+board/projects/
+log/*.log
+log/selfcheck-fail/
+!log/.gitkeep
+tools/venv/
+# ★ 2026-11-07：Windows 原生 venv（py 在宿主机的真身，含 pwn/z3/Crypto）。
+#   和 tools/venv（Linux venv）一样不进 git：几百 MB 二进制、跟平台绑定。
+#   重建：~/anaconda3/envs/ctf/python.exe -m venv tools/venv-win
+#         tools/venv-win/Scripts/python.exe -m pip install -r requirements-core.txt
+tools/venv-win/
+**/__pycache__/
+**/*.pyc
+work/ui/.last-session.json
+# pi 运行态：会话记录里有题面/密钥痕迹，auth.json 里是登录凭据
+sessions/
+.pi-ctf/
+.pi/agent/auth.json
+.pi/agent/models.json
+.pi/agent/nccsec-token
+.pi/agent/kimi-token
+.pi/agent/switch-on-reload.json
+# 2026-11-11 审计：.pi/ 下除 git 跟踪的配置外全是运行态；tsecbench.json 里是 36 位平台 token
+.pi/*
+# ★ 2026-11-18: `.pi/config/` 的两个例外删了 —— 该目录从来没存在过（git 跟踪的配置真源是 agent-template/）。
+#   留着只会让人以为配置该放那里。
+
+# 大而不该入库的（镜像里由 Dockerfile 生成）
+vendor/node/
+
+# ── 2026-11-03 新增（git init 前实测体积，单位 MB）────────────────────────
+# 判定原则：数据资产 / 可重建产物 / 第三方源码 不入库；我方源码全入库。
+# ⚠ gitignore 不支持行尾注释 —— `pocs/  # 说明` 会把「# 说明」当成模式的一部分，
+#   于是整条规则失效（本次实测踩过：43315 个文件仍全部被 add）。注释必须独立成行。
+
+# 大体积数据资产（合计 207 MB）
+pocs/
+kb/
+tools/ctfpoc/
+tools/wordlists/
+
+# 第三方二进制工具（合计 9 MB，重建靠脚本）
+tools/gobin/
+
+# 第三方二进制可执行（rg/fd/jsteg/bkcrack/outguess，共 13 MB）
+# install.sh 会重新拉取；源码仓不需要它们
+tools/bin/rg
+tools/bin/fd
+tools/bin/jsteg
+tools/bin/bkcrack
+tools/bin/outguess
+
+# 抓取的外部 WP 语料（15 MB，wpfetch 可重抓）
+tools/knowledge/ctf-wp/
+
+# 第三方源码，只读参考（Q5=B 不改其源码，合计 177 MB）
+sapper-v2-master/
+vendor/pi/node_modules/
+agent-template/npm/node_modules/
+# 前端依赖（容器内装，宿主不需要；进了 git 会让 clone 变 300MB+）
+work/ui/web/node_modules/
+
+# 本机误建的怪目录（%SystemDrive% 是 Windows 变量没展开留下的空壳）
+%SystemDrive%/
+.tmp2/
+
+# ── 2026-11-03 追加：work/ 下的运行与测试产物 ─────────────────────────────
+# 判定：`work/ui/roles-pack/` 是**配置**；`work/tsecbench-run/radar.py` 与 `slot.sh`
+#       是**真脚本**（内存闸门 + 槽位锁，有来历有用法，必须入库）—— 两者都要保住。
+#       其余是 fgs/测试跑出来的临时件，每次跑都改时间戳与路径
+#       （本次实测：跑一次冒烟就改了 _brief-restart.txt）。
+work/_test_cli_smoke/
+# ★ 2026-11-24：求解器现场拼的临时脚本（work/tmp-*.sh / .py）。
+#   它们不是仓库资产，但容易被 git add -A 顺手带进去 —— 本轮已经踩了两次。
+work/tmp-*
+# 2026-11-24：评测跑出来的空日志 —— 有 2 个 0 字节的 out-*.log 被误跟踪进仓库。
+log/evalbench/out-*.log
+work/inj/
+work/inj2/
+work/inbox/
+work/intake/
+work/sapper-study/
+# ★ 2026-11-21：解题运行时目录（每题的会话 jsonl + scratch 素材，96M，含 agent 从靶场
+#   拉回来的第三方仓库副本 —— 其中一个带 .git，会让 git add 直接 fatal）。
+#   它是**回放证据**，留在磁盘上供复盘（baoan-retro/data 里有汇总），但不入库：
+#   证据的可复核性由汇总 + shard 日志保证，不需要把 96M 原始会话塞进版本库。
+work/solve/
+# 反过来保住配置与真脚本
+!work/ui/roles-pack/
+!work/tsecbench-run/radar.py
+!work/tsecbench-run/slot.sh
+# 临时文件：按后缀逐个补永远会漏（2026-11-05 又漏了 .tmp-msg.txt 被 add -A 带进提交），改为通配
+.tmp-*
+.tmp*/
+log/autoshape.jsonl
+
+# ★ 2026-11-06 操作者定案：OpenSecurity-2.0 **只是学习对象，不导入本项目**。
+#   它是别人（zylc369）的 OpenCode 项目，跑在 OpenCode 1.x，与本仓 pi 底座无关；
+#   纳入版本管理会造成两套 AGENTS.md 同树、体积膨胀、且把别人的代码算成我们的产出。
+#   忽略而非删除：留在本地供参考（读源码、抄机制），但不进 git、不进镜像、不算本仓产物。
+OpenSecurity-2.0/
+
+# Windows 侧原生工具（gdb / nc / socat）：由 ghproxy 下载后落在本地，
+# 949MB 不可入库；换机需按 MEMORY 里的 CCG 条目重装。
+tools/win/
+
+# 第三方源码只读参考，不入库（AGENTS §五 / Q5=B：不改其源码）
+源码/
+
+# 测试时若 PI_LAB_BOARD_DIR 展开失败会落到这里（2026-11-10 实测产生 17 个临时板）
+undefined/
+
+# DSH/AgentTeams 的工作树目录
+.agents/
+
+# bench 跑分结果：本机 pi 无 API key 时产生的是**假数据**（agent 没跑、判分却全绿）。
+# 2026-11-10 实测：4 份历史结果全部作废。等 key 配好、跑出真实基线再决定是否入库。
+bench/results/
+
+# 鎵樼璇勬祴闀滃儚鍖咃紙鏁扮櫨 MB锛屼笂浼犲钩鍙扮敤锛屼笉杩涗粨搴擄級
+work/hosted-agent/*.tar.gz
+work/hosted-agent/*.tar
+# ── 2026-11-14 追加：跑分/编排运行时产物（每次运行都变，不入库）─────────────────
+.agent-teams/
+log/flag-ctx/
+log/flag-watch.jsonl
+log/lane-watch.jsonl
+log/idle-resume.jsonl
+log/tool-trace/
+tools/venv-sdk/
+# ── 2026-11-14：本地测试资料目录（内含 .ovpn 密钥等敏感文件，绝不入库）──────────
+测试/
+# ★ 2026-11-21（R5 清理纪律）：一次性排查脚本的归档目录。
+#   R5-03 §2.1 记过一次教训（把归档和删除写在同一条命令里，归档被一起删掉）。
+#   从本轮起：一次性脚本**先移到** `.archive-<日期>/`（本规则保证它不入库），
+#   确认无引用后再单独删，两步分开。
+.archive-*/
+
+# ★ 2026-11-21（R5 安全）：同目录的**另一个名字**。实测 `测试靶场/` 下有
+#   `task_*.ovpn`（含客户端私钥）与平台 SDK 文档，而旧规则只挡了 `测试/` ——
+#   `git add -A` 会把它连同私钥一起入库。名字不同 = 规则不同，这条不是"多写一行"，
+#   是堵一个真的会泄密的洞（本条由 test_selfcheck 第 5 组静态不变量守着）。
+测试靶场/
+# 2026-11-14：技能库改动前的手工备份（不入库，本地留档用）
+skills.bak-*/
+.skills-backup-*/
+# 2026-11-14：UI 截图调试产物（截图工具失败留下的空目录）
+work/ui-shots/
+
+# workbuddy 工具的记忆目录（2026-11-18 出现，仓库无任何引用）
+.workbuddy/
+# uibuild 的取回暂存区（构建完自动删；中断时可能残留，绝不能入库）
+.uibuild-staging/
+
+# 本地基线备份（会话原件，47M+，可随时重建，不入库）
+work/_baseline-*/
+
+# Windows 保留设备名被 MSYS 映射出来的伪文件（不是仓库内容）
+CON
+PRN
+AUX
+NUL
+
+# 开发过程残留（work/ui 是 WebUI 产品代码，**不能**忽略）
+work/bench-*/
+work/inj/
+work/solve/

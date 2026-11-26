@@ -1,0 +1,5 @@
+FOUND_FLAG=flag{local-eval-idor-7b2d40}
+
+- 已确认：IDOR 越权：`/note?id=2` 是私有 note，直接返回 `flag{local-eval-idor-7b2d40}`，未经授权即可读取；id=1 为 public，说明没有做用户权限校验。
+- 已证伪：无需登录、没有 SQLi/SSTI 迹象（首页仅提供 `href='/note?id=1'`，服务端是 Python BaseHTTP 简易应用）。
+- 还差什么：无，flag 已逐字取得。

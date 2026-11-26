@@ -1,0 +1,265 @@
+#!/bin/bash
+# ─────────────────────────────────────────────────────────────────────────────
+# winrm —— Windows 远程命令执行（WSMan/WinRM），用于**防御靶场 / 应急响应**远程排查
+#
+# 为什么有它：只给 RDP 时，AI 只能"截图→OCR→猜"，或者"盲写脚本挨个试"；而排查要的是
+# 「一条命令 + 原始输出 + 时间戳」的可复现证据。WinRM 是 Windows 侧的 SSH ——
+# 有了它，AI 才进入「执行 → 看输出 → 改一条 → 再执行」的闭环，而不是瞎试。
+#
+# 实现：走 **WSL interop** 调 Windows 自带 WinRM 客户端（powershell.exe / winrs.exe），
+#       不依赖 Linux 侧的 evil-winrm / pywinrm（本机没装，装还得联网）。
+#
+# 用法（凭据走环境变量，避免出现在 argv / 进程列表里）：
+#   winrm selftest                       # 先验通道（interop/编码/环境变量），不需要靶机
+#   winrm probe <host> [--https]         # 5985/5986 活没活（401/405 = 活着）
+#   PI_WINRM_USER=u PI_WINRM_PASS=p winrm run <host> '<PS 命令>'
+#   PI_WINRM_USER=u PI_WINRM_PASS=p winrm session <host> < cmds.txt   # ★一次认证跑 N 条
+#   PI_WINRM_JUMP=user@jump winrm via-jump <host> '<PS 命令>'          # 穿跳板机（ssh -L）
+#   winrm trust-add <host|*>             # 工作组/IP 靶机必配（客户端侧，需管理员）
+#
+# 环境变量：PI_WINRM_USER / PI_WINRM_PASS
+#           PI_WINRM_AUTH = Negotiate(默认,=NTLM) | Basic | Kerberos | CredSSP
+#           PI_WINRM_HTTPS=1（走 5986） / PI_WINRM_PORT / PI_WINRM_JUMP / PI_WINRM_LPORT
+#           PI_WINRM_EVIDENCE_DIR（证据目录：run/session 的原始输出自动落盘带时间戳）
+#           PI_WINRM_TIMEOUT（秒，默认 240）：**单次调用**的硬超时，防一条重命令挂死整个会话
+# ─────────────────────────────────────────────────────────────────────────────
+set -uo pipefail
+
+PS=/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe
+WINRS=/mnt/c/Windows/System32/winrs.exe
+# 缓存目录：$PI_WINRM_CACHE → 仓库根/.cache/winrm（自解析，发布包/容器里目录不同）
+_LAB="${PI_LAB_ROOT:-}"
+if [ -z "$_LAB" ]; then
+  _s="$0"
+  case "$_s" in */*) : ;; *) _s="$(command -v -- "$_s" 2>/dev/null || echo "$_s")" ;; esac
+  _i=0
+  while [ -L "$_s" ] && [ "$_i" -lt 10 ]; do
+    _l="$(readlink "$_s")"
+    case "$_l" in /*) _s="$_l" ;; *) _s="$(dirname "$_s")/$_l" ;; esac
+    _i=$((_i + 1))
+  done
+  _LAB="$(cd "$(dirname "$_s")/../.." && pwd)"
+fi
+CACHE="${PI_WINRM_CACHE:-$_LAB/.cache/winrm}"
+# Windows 侧可见路径：只有 WSL interop 才存在（容器里没有 → 下面会明确报错，不是静默错乱）
+WINPREFIX="$(wslpath -w "$CACHE" 2>/dev/null || echo "")"
+mkdir -p "$CACHE"
+
+die() { echo "✗ $*" >&2; exit 1; }
+
+# ★ 非显然的坑：WSL interop **不会**把 Linux 环境变量带给 Windows 进程，
+#   必须把变量名登记进 WSLENV（/u = 只在 WSL→Win32 方向转发）。少这一步 → PS 里全是 $null。
+psenv() {
+  # WSLENV 的方向标记：/u = 只在 Win32→WSL 转发（写反了变量就永远传不过去）
+  # 我们要的是 WSL→Win32；**不带标记 = 双向共享**，所以这里不加任何标记。
+  local v="PI_WINRM_HOST:PI_WINRM_USER:PI_WINRM_PASS:PI_WINRM_CMD:PI_WINRM_CMDS:PI_WINRM_AUTH:PI_WINRM_HTTPS:PI_WINRM_PORT"
+  export WSLENV="$v${WSLENV:+:$WSLENV}"   # ← 注意不是 ${WSLENV:+$v:$WSLENV}：未设时那种写法会得到空串
+}
+[ -x "$PS" ] || die "找不到 powershell.exe（WSL interop 不可用？）：$PS"
+
+# 连接相关的 PS 头部（纯 ASCII，避免 PS5.1 的编码坑；中文一律留在 bash 侧打印）
+PS_HEADER='
+$ErrorActionPreference = "Stop"
+[Console]::OutputEncoding = [Text.Encoding]::UTF8
+$OutputEncoding = [Text.Encoding]::UTF8
+$h = $env:PI_WINRM_HOST
+$cred = $null
+if ($env:PI_WINRM_USER -and $env:PI_WINRM_PASS) {
+  $sec  = ConvertTo-SecureString $env:PI_WINRM_PASS -AsPlainText -Force
+  $cred = New-Object System.Management.Automation.PSCredential($env:PI_WINRM_USER, $sec)
+}
+$auth = if ($env:PI_WINRM_AUTH) { $env:PI_WINRM_AUTH } else { "Negotiate" }
+$sessArgs = @{ ComputerName = $h; Authentication = $auth; ErrorAction = "Stop" }
+if ($cred) { $sessArgs.Credential = $cred }
+if ($env:PI_WINRM_HTTPS -eq "1") {
+  $sessArgs.UseSSL = $true
+  $sessArgs.Port   = if ($env:PI_WINRM_PORT) { [int]$env:PI_WINRM_PORT } else { 5986 }
+} elseif ($env:PI_WINRM_PORT) { $sessArgs.Port = [int]$env:PI_WINRM_PORT }
+'
+
+# 写 ps1：**必须带 UTF-8 BOM**，否则 PS 5.1 按 ANSI 解码，脚本里任何非 ASCII 都会乱码
+ps_new() {                       # 用法: ps_new <name>  <<'EOF' ... EOF
+  local name="$1"
+  printf '\xEF\xBB\xBF' > "$CACHE/$name.ps1"
+  cat >> "$CACHE/$name.ps1"
+  echo "$WINPREFIX\\$name.ps1"
+}
+# 统一出口：脚本输出经 Out-File -Encoding utf8 落到 Windows 可见文件，
+# 再由 Linux 读回（tail -c +4 去掉 BOM）。绕开 PS5.1 的 OEM 代码页乱码。
+ps_run() {                       # $1 = 脚本的 Windows 路径
+  psenv
+  local res="$CACHE/last.txt" reswin="$WINPREFIX\\last.txt"
+  rm -f "$res"
+  printf '\xEF\xBB\xBF' > "$CACHE/wrap.ps1"
+  cat >> "$CACHE/wrap.ps1" <<WRAP
+\$ProgressPreference = 'SilentlyContinue'
+& '$1' *>&1 | Out-File -FilePath '$reswin' -Encoding utf8
+WRAP
+  local tmo="${PI_WINRM_TIMEOUT:-240}"
+  timeout "$tmo" "$PS" -NoProfile -ExecutionPolicy Bypass -File "$WINPREFIX\\wrap.ps1" >/dev/null 2>&1
+  local rc=$?
+  if [ -f "$res" ]; then tail -c +4 "$res" | tr -d '\r'; else
+    if [ "$rc" = "124" ]; then echo "⚠ 超时（${tmo}s）：有命令太重/太慢被掐断 —— 拆小、加过滤条件，或 PI_WINRM_TIMEOUT 调大" >&2
+    else echo "✗ PS 没有产出（interop 挂了？）" >&2; fi
+  fi
+  [ "$rc" = "124" ] && echo "（会话已在本地掐断；远端 PSSession 由服务端超时回收）" >&2
+  return 0
+}
+
+# ── 证据落盘：IR 要的是「命令 + 原始输出 + 时间戳」三件套 ────────────────────
+#   设 PI_WINRM_EVIDENCE_DIR=work/<pid>/evidence 后，每次 run/session 的原始输出都会
+#   存成 <host>-<时间戳>-<动作>.txt（带 host/user/时间头），直接可进证据包
+save_evidence() {          # $1 = 输出文件, $2 = 动作名
+  [ -n "${PI_WINRM_EVIDENCE_DIR:-}" ] || return 0
+  mkdir -p "$PI_WINRM_EVIDENCE_DIR"
+  local f="$PI_WINRM_EVIDENCE_DIR/${PI_WINRM_HOST:-host}-$(date +%Y%m%d-%H%M%S)-$2.txt"
+  {
+    printf '# host=%s\n# user=%s\n# action=%s\n# at=%s\n# via=winrm (WSL interop -> powershell.exe)\n\n' \
+      "${PI_WINRM_HOST:-?}" "${PI_WINRM_USER:-<current identity>}" "$2" "$(date -Is)"
+    cat "$1"
+  } > "$f" 2>/dev/null
+  echo "（证据已落盘：$f）" >&2
+}
+
+# ── selftest：不需要靶机，先证明"通道本身"是通的 ──────────────────────────────
+cmd_selftest() {
+  local p; p=$(ps_new selftest <<'EOF'
+PS_HEADER_PLACEHOLDER
+Write-Output ("PSVersion      : " + $PSVersionTable.PSVersion.ToString())
+Write-Output ("interop ok     : " + [System.Environment]::OSVersion.VersionString)
+$hv = $env:PI_WINRM_HOST; if (-not $hv) { $hv = "<unset>" }
+Write-Output ("host env       : " + $hv)
+Write-Output "UTF8 check     : 中文输出正常 / abc-123"
+Write-Output ("cmdlets        : " + ((Get-Command New-PSSession,Invoke-Command -EA SilentlyContinue).Count) + " 个 Remoting cmdlet 可用")
+EOF
+)
+  inject_header "$CACHE/selftest.ps1"      # ★ 必须走这个（会补回 UTF-8 BOM）
+  ps_run "$p"
+}
+
+# ── probe：不问凭据，只看端点活没活 ─────────────────────────────────────────
+cmd_probe() {
+  local host="${1:?用法: winrm probe <host> [--https]}" https=0
+  [ "${2:-}" = "--https" ] && https=1
+  local port=$(( https ? 5986 : 5985 )) scheme=$([ $https = 1 ] && echo https || echo http)
+  echo "[*] $host:$port  ($scheme)"
+  local code
+  code=$(curl --noproxy '*' -m 6 -s -o /dev/null -w '%{http_code}' \
+              -u probe:probe "$scheme://$host:$port/wsman" 2>/dev/null)
+  code=${code:-000}
+  case "$code" in
+    401|405) echo "  ✓ WinRM 活着（HTTP $code：WSMan 端点存在）" ;;
+    000)     echo "  ✗ 连不上（端口关 / 防火墙 / 需要先连跳板机）"
+             echo "    端口扫描: nmap -Pn -p 5985,5986,445,3389,22 --open $host"
+             echo "    备选通道: SMB445(wmiexec/smbexec) · Windows OpenSSH 22 · RDP3389(最后手段)" ;;
+    *)       echo "  ? HTTP $code —— 可能不是 WSMan（或前面挂了代理/WAF）" ;;
+  esac
+}
+
+# ── run：一次性执行（Invoke-Command）─────────────────────────────────────────
+cmd_run() {
+  local host="${1:?用法: winrm run <host> '<PS 命令>'}" cmd="${2:?缺 PS 命令}"
+  export PI_WINRM_HOST="$host" PI_WINRM_CMD="$cmd"
+  local p; p=$(ps_new run <<'EOF'
+PS_HEADER_PLACEHOLDER
+try {
+  Invoke-Command @sessArgs -ScriptBlock ([ScriptBlock]::Create($env:PI_WINRM_CMD)) |
+    Out-String -Width 4096
+} catch {
+  Write-Output ("ERR: " + $_.Exception.Message)
+  exit 1
+}
+EOF
+)
+  inject_header "$CACHE/run.ps1"
+  ps_run "$p"; local rc=$?
+  save_evidence "$CACHE/last.txt" run
+  unset PI_WINRM_HOST PI_WINRM_CMD
+  return $rc
+}
+
+# ── session：一次认证跑多条命令（stdin 每行一条）★ 排查主力 ─────────────────
+cmd_session() {
+  local host="${1:?用法: winrm session <host> < cmds.txt}"
+  export PI_WINRM_HOST="$host"
+  local body; body=$(cat)
+  [ -n "$body" ] || die "stdin 没有命令（每行一条）"
+  local p; p=$(ps_new session <<'EOF'
+PS_HEADER_PLACEHOLDER
+$lines = Get-Content -LiteralPath $env:PI_WINRM_CMDS -Encoding UTF8 | Where-Object { $_.Trim() -ne "" }
+try   { $s = New-PSSession @sessArgs }
+catch { Write-Output ("ERR connect: " + $_.Exception.Message); exit 1 }
+foreach ($l in $lines) {
+  Write-Output ("### " + $l)
+  try   { Invoke-Command -Session $s -ScriptBlock ([ScriptBlock]::Create($l)) | Out-String -Width 4096 }
+  catch { Write-Output ("ERR: " + $_.Exception.Message) }
+}
+Remove-PSSession $s
+EOF
+)
+  inject_header "$CACHE/session.ps1"
+  printf '%s\n' "$body" > "$CACHE/session.cmds.txt"     # UTF-8；PS 侧按 -Encoding UTF8 读
+  export PI_WINRM_CMDS="$WINPREFIX\\session.cmds.txt"
+  ps_run "$p"
+  save_evidence "$CACHE/last.txt" session
+  unset PI_WINRM_CMDS
+  unset PI_WINRM_HOST
+}
+
+# ── via-jump：穿跳板机（ssh -L 把靶机 5985 映射到本地）────────────────────────
+cmd_via_jump() {
+  local host="${1:?用法: PI_WINRM_JUMP=user@jump winrm via-jump <target> '<cmd>'}" cmd="${2:?缺 PS 命令}"
+  [ -n "${PI_WINRM_JUMP:-}" ] || die "先设 PI_WINRM_JUMP=user@jump_host"
+  local lport="${PI_WINRM_LPORT:-15985}" rport="${PI_WINRM_PORT:-5985}"
+  echo "[*] 开隧道: 127.0.0.1:$lport → $host:$rport（经 $PI_WINRM_JUMP）"
+  ssh -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=20 \
+      -L "127.0.0.1:$lport:$host:$rport" "$PI_WINRM_JUMP" &
+  local tunnel=$!
+  trap 'kill $tunnel 2>/dev/null' EXIT
+  sleep 2
+  echo "[*] 经隧道执行（NTLM 下需 127.0.0.1 在客户端 TrustedHosts：winrm trust-add 127.0.0.1）"
+  export PI_WINRM_PORT="$lport" PI_WINRM_HTTPS="${PI_WINRM_HTTPS:-}"
+  cmd_run 127.0.0.1 "$cmd"
+}
+
+# ── trust-add：工作组/IP 靶机必配（客户端侧，需管理员）──────────────────────
+cmd_trust_add() {
+  local host="${1:?用法: winrm trust-add <host|*>}"
+  local p; p=$(ps_new trust <<EOF
+try {
+  Set-Item WSMan:\\localhost\\Client\\TrustedHosts -Value '$host' -Concatenate -Force
+  Write-Output ("OK TrustedHosts = " + (Get-Item WSMan:\\localhost\\Client\\TrustedHosts).Value)
+} catch {
+  Write-Output ("ERR (usually needs admin): " + \$_.Exception.Message)
+}
+EOF
+)
+  ps_run "$p"
+}
+
+# ── 内部：把头部注入生成的 ps1（保留 BOM）────────────────────────────────────
+ps_check_bom() {   # 防呆：ps1 没有 UTF-8 BOM → PS5.1 按 ANSI 解码，中文必乱码
+  local f="$1"
+  if [ "$(head -c3 "$f" | od -An -tx1 | tr -d ' \n')" != "efbbbf" ]; then
+    echo "⚠ 生成的 ps1 缺 UTF-8 BOM（$f）——中文会乱码" >&2
+    return 1
+  fi
+}
+
+inject_header() {
+  local f="$1"
+  awk -v hdr="$PS_HEADER" 'NR==1 && /PS_HEADER_PLACEHOLDER/ { print hdr; next } { print }' "$f" > "$f.new"
+  printf '\xEF\xBB\xBF' > "$f"
+  cat "$f.new" >> "$f"; rm -f "$f.new"
+  ps_check_bom "$f" || true
+}
+
+case "${1:-}" in
+  selftest)  cmd_selftest ;;
+  probe)     shift; cmd_probe "$@" ;;
+  run)       shift; cmd_run "$@" ;;
+  session)   shift; cmd_session "$@" ;;
+  via-jump)  shift; cmd_via_jump "$@" ;;
+  trust-add) shift; cmd_trust_add "$@" ;;
+  *) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//' ;;
+esac

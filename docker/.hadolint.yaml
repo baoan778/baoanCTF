@@ -1,0 +1,9 @@
+# hadolint 配置：只忽略**有明确理由**的规则，其余一律当真问题修。
+# 用法： hadolint --config .hadolint.yaml Dockerfile.hosted
+ignored:
+  # DL3008 钉 apt 包版本：本镜像是「一次性评测沙箱」，安全补丁比可复现性更重要；
+  # 且 Ubuntu 24.04 的包版本号随镜像源滚动，钉死会导致构建在某天直接失败。
+  - DL3008
+  # DL3013 钉 pip 版本：同上，pwn 类依赖对新版解释器敏感，钉死反而更容易崩。
+  - DL3013
+failure-threshold: warning

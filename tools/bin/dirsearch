@@ -1,0 +1,6 @@
+#!/bin/bash
+T="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+PY="$T/venv/bin/python"
+cd "$T/vendor/dirsearch-0.4.3" || exit 1
+export PYTHONPATH="$T/vendor/dirsearch-0.4.3:${PYTHONPATH:-}"
+exec "$PY" "$T/vendor/dirsearch-0.4.3/dirsearch.py" "$@"

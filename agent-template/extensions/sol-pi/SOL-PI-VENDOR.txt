@@ -1,0 +1,9 @@
+PiCTF vendor marker —— 别手改本行，引擎靠它判断要不要升级
+================================================================
+upstream   https://github.com/NVlabs/SoL-Pi
+commit     06b3ee358ddc5cebc5fb21a8e7493fab2db508ce   (2026-10-12)
+license    MIT
+vendored   2026-10-13
+patches    pictf-1   pi 1.1.0 的 then_run isError 守卫（见 PATCHES.md）
+target pi  1.1.0（随包 engine/node_modules 里那份）
+local      engine/agent-pack/extensions/sol-pi/

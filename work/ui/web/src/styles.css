@@ -1,0 +1,673 @@
+/* ─────────────────────────────────────────────────────────────
+   PiCTF 设计系统 · v2（2026-11-05 重做）
+   目标：从「深色表格拼盘」变成有层级的作战台 —— 侧栏导航、发丝线、
+   真实焦点态、统一的控件尺度。只动样式与布局骨架，不动任何页面逻辑。
+   ───────────────────────────────────────────────────────────── */
+
+/* 字体：public/fonts 里的 woff2 真正被用上（不引入就是 120KB 死重）。 */
+@font-face { font-family: "InterLocal"; src: url("/fonts/inter-latin-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "InterLocal"; src: url("/fonts/inter-latin-500.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "InterLocal"; src: url("/fonts/inter-latin-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "JetBrainsLocal"; src: url("/fonts/jetbrains-mono-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "JetBrainsLocal"; src: url("/fonts/jetbrains-mono-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+
+:root {
+  /* 层次：bg 最沉 → panel 抬一级 → panel-2 再抬 → panel-3 最亮（hover）。
+     每级亮度差 4~6%，深色下刚好看出边界又不刺眼（v3 2026-11-14）。 */
+  --bg:        #0a0f0d;
+  --bg-grad:   radial-gradient(1100px 620px at 14% -12%, #10312a 0%, transparent 62%),
+               radial-gradient(900px 520px at 96% 4%, #1a2440 0%, transparent 58%);
+  --panel:     #111916;
+  --panel-2:   #17211d;
+  --panel-3:   #1e2b26;
+  --line:      #253530;
+  --line-soft: #1b2723;
+
+  /* 文字三级，弱级在 #111916 上仍 >= 4.5:1（AA） */
+  --fg:        #e9f0ec;
+  --fg-dim:    #9aaba3;
+  --fg-faint:  #6b7d75;
+
+  /* 主色青绿（作战/成功）；强调暖金（得分/关键动作）；警示朱红 */
+  --accent:      #2fd6a0;
+  --accent-dim:  #1e8f6c;
+  --accent-soft: rgba(47, 214, 160, .13);
+  --accent-glow: rgba(47, 214, 160, .30);
+  --gold:        #f3c05a;
+  --gold-soft:   rgba(243, 192, 90, .14);
+  --ok:   #2fd6a0;
+  --warn: #f3c05a;
+  --bad:  #ff6b6b;
+
+  /* 4px 栅格 + 三级圆角 */
+  --r-sm: 8px;
+  --r:    12px;
+  --r-lg: 16px;
+  --row:  36px;
+  --row-sm: 32px;
+
+  --sh: 0 1px 0 rgba(255,255,255,.04) inset, 0 10px 30px -18px #000;
+  --sh-lg: 0 1px 0 rgba(255,255,255,.05) inset, 0 24px 60px -28px #000;
+  --mono: "JetBrainsLocal", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: "InterLocal", ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+  --sp: 8px;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  background: var(--bg);
+  background-image: var(--bg-grad);
+  background-attachment: fixed;
+  color: var(--fg);
+  font: 14px/1.65 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 滚动条：默认那条太丑，跟暗色不搭 */
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #2a3242; border-radius: 999px; border: 2px solid transparent; background-clip: content-box; }
+*::-webkit-scrollbar-thumb:hover { background: #3a4557; background-clip: content-box; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── 控件：统一高度、统一焦点环、统一过渡 ─────────────────────── */
+button {
+  font: inherit; color: var(--fg);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 6px 12px; height: 32px;
+  cursor: pointer;
+  transition: background .12s, border-color .12s, color .12s;
+  white-space: nowrap;
+}
+button:hover:not(:disabled) { background: var(--panel-3); border-color: #33405a; }
+button:active:not(:disabled) { transform: translateY(.5px); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+button:disabled { opacity: .4; cursor: not-allowed; }
+
+input, textarea, select {
+  font: inherit; color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 6px 10px; width: 100%;
+  transition: border-color .12s, box-shadow .12s;
+}
+input { height: 32px; }
+textarea { min-height: 60px; }
+input::placeholder, textarea::placeholder { color: var(--fg-faint); }
+input:focus, textarea:focus, select:focus {
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ── 应用骨架：左侧栏 + 主区 ───────────────────────────────── */
+.app { display: flex; height: 100%; }
+
+.sidebar {
+  /* 224px：中文标签 + 图标 + 分组标题刚好不挤（原 196px 偏窄，长标签会截断） */
+  width: 224px; flex: 0 0 224px;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 16px 12px;
+  background: linear-gradient(180deg, #0d1411 0%, #0a100d 100%);
+  border-right: 1px solid var(--line-soft);
+  overflow-y: auto;
+}
+.brand {
+  display: flex; align-items: center; gap: 9px;
+  padding: 4px 8px 16px; font-weight: 600; letter-spacing: .4px; font-size: 15px;
+}
+.brand img { width: 22px; height: 22px; border-radius: 5px; }
+.brand span.sub { color: var(--fg-faint); font-weight: 400; font-size: 11px; letter-spacing: .2px; }
+
+.nav { display: flex; flex-direction: column; gap: 2px; }
+
+/* 分组标题：作战 / 资产 / 系统 —— 10 个页签不分组等于让人每次扫一遍 */
+.nav .group {
+  margin: 12px 0 4px; padding: 0 8px;
+  font-size: 10.5px; font-weight: 600; letter-spacing: 1.1px;
+  text-transform: uppercase; color: var(--fg-faint);
+}
+.nav .group:first-child { margin-top: 2px; }
+
+.nav .tab {
+  display: flex; align-items: center; gap: 10px;
+  height: var(--row); padding: 0 10px; width: 100%;
+  background: transparent; border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  color: var(--fg-dim); font-size: 13.5px;
+  text-align: left; justify-content: flex-start;
+  transition: background .14s ease, color .14s ease;
+}
+.nav .tab:hover { background: var(--panel-2); color: var(--fg); }
+.nav .tab.on {
+  background: var(--accent-soft); color: var(--fg);
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.nav .tab.on .ico { color: var(--accent); opacity: 1; }
+.nav .tab .ico {
+  width: 18px; height: 18px; flex: 0 0 18px;
+  display: inline-flex; align-items: center; justify-content: center;
+  opacity: .8;
+}
+.nav .tab .ico svg { width: 16px; height: 16px; display: block; }
+
+.sidebar .foot { margin-top: auto; display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+
+/* 顶栏（主区顶部） */
+.topbar {
+  display: flex; align-items: center; gap: 12px;
+  height: 56px; flex: 0 0 56px;
+  padding: 0 28px;
+  border-bottom: 1px solid var(--line-soft);
+  background: rgba(10, 15, 13, .78);
+  backdrop-filter: blur(10px);
+}
+.topbar .title { font-weight: 600; font-size: 14px; }
+.topbar .desc { color: var(--fg-faint); font-size: 12px; }
+.spacer { flex: 1; }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 24px; font-size: 12px; color: var(--fg-dim);
+  background: var(--panel); border: 1px solid var(--line-soft);
+  border-radius: 999px; padding: 0 10px;
+}
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--fg-faint); flex: 0 0 auto; }
+.dot.ok { background: var(--ok); box-shadow: 0 0 8px rgba(61,220,151,.55); }
+.dot.bad { background: var(--bad); box-shadow: 0 0 8px rgba(255,107,107,.5); }
+
+.main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.page { flex: 1; min-width: 0; overflow: auto; padding: 24px 28px; }
+
+/* ── 卡片与栅格 ─────────────────────────────────────────── */
+.grid { display: grid; grid-template-columns: 300px 1fr; gap: 16px; height: 100%; min-height: 0; }
+.grid.wide { grid-template-columns: 360px 1fr; }
+.col { min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+
+.card {
+  border: 1px solid var(--line); border-radius: var(--r);
+  background: linear-gradient(180deg, var(--panel-2) 0%, var(--panel) 100%);
+  padding: 16px;
+  box-shadow: var(--sh);
+  transition: border-color .14s ease;
+}
+.card:hover { border-color: #2c3f38; }
+.card h3 {
+  margin: 0 0 10px; font-size: 12px; color: var(--fg-dim);
+  font-weight: 600; letter-spacing: .6px; text-transform: uppercase;
+}
+.card h3 .n { color: var(--fg-faint); font-weight: 400; letter-spacing: 0; text-transform: none; }
+
+.list { display: flex; flex-direction: column; gap: 4px; overflow: auto; }
+.item {
+  text-align: left; width: 100%; height: auto;
+  background: transparent; border: 1px solid transparent;
+  border-radius: var(--r-sm); padding: 8px 10px;
+  transition: background .1s, border-color .1s;
+}
+.item:hover { background: var(--panel-2); border-color: var(--line); }
+.item.on { background: var(--accent-soft); border-color: var(--accent-dim); }
+
+.muted { color: var(--fg-dim); font-size: 12px; }
+.faint { color: var(--fg-faint); font-size: 12px; }
+.mono { font-family: var(--mono); font-size: 12px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 13px; margin: 0; }
+.kv dt { color: var(--fg-faint); }
+.kv dd { margin: 0; word-break: break-all; }
+
+.node { border: 1px solid var(--line); border-left: 3px solid var(--line); border-radius: var(--r-sm); padding: 8px 10px; background: var(--panel-2); }
+.node.goal { border-left-color: var(--accent); }
+.node.fact { border-left-color: var(--ok); }
+.node.step { border-left-color: var(--warn); }
+.pre { font-family: var(--mono); font-size: 12px; white-space: pre-wrap; word-break: break-word; margin: 0; }
+.empty { color: var(--fg-faint); font-size: 13px; padding: 10px 0; }
+.err { color: var(--bad); font-size: 12px; background: rgba(255,107,107,.08); border: 1px solid rgba(255,107,107,.25); border-radius: var(--r-sm); padding: 8px 10px; }
+
+/* ── 对话 ──────────────────────────────────────────────── */
+.chat { display: flex; flex-direction: column; height: 100%; }
+.stream { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 12px; padding: 4px 2px 16px; }
+.msg {
+  border: 1px solid var(--line); border-radius: var(--r);
+  padding: 10px 14px; background: var(--panel);
+  max-width: 92%;
+}
+.msg.user { align-self: flex-end; border-color: var(--accent-dim); background: #142238; }
+.msg.assistant { align-self: flex-start; background: var(--panel); }
+.msg.tool { font-family: var(--mono); font-size: 12px; color: var(--fg-dim); align-self: flex-start; }
+.msg.note {
+  align-self: center; background: transparent; border-style: dashed;
+  color: var(--fg-faint); font-size: 12px; max-width: 100%;
+}
+.role { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--fg-faint); margin-bottom: 4px; }
+.body { white-space: pre-wrap; word-break: break-word; }
+.composer { display: flex; gap: 10px; padding-top: 14px; border-top: 1px solid var(--line-soft); }
+.composer textarea { resize: none; height: 84px; font-family: inherit; }
+
+/* ── 上传 / 导出 / 工具栏 ─────────────────────────────────── */
+.toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.toolbar .sep { width: 1px; height: 20px; background: var(--line); }
+.drop {
+  border: 1.5px dashed var(--line); border-radius: var(--r);
+  padding: 18px 14px; text-align: center; color: var(--fg-dim);
+  font-size: 13px; transition: border-color .12s, background .12s;
+  cursor: pointer;
+}
+.drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); color: var(--fg); }
+.drop .big { font-size: 22px; display: block; margin-bottom: 6px; opacity: .8; }
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; padding: 2px 8px; border-radius: 999px;
+  border: 1px solid var(--line); color: var(--fg-dim);
+}
+.pill.ok { border-color: rgba(61,220,151,.35); color: var(--ok); background: rgba(61,220,151,.08); }
+.pill.bad { border-color: rgba(255,107,107,.35); color: var(--bad); background: rgba(255,107,107,.08); }
+.pill.warn { border-color: rgba(240,182,72,.35); color: var(--warn); background: rgba(240,182,72,.08); }
+.row { display: flex; gap: 8px; align-items: center; }
+.row.wrap { flex-wrap: wrap; }
+.hint { color: var(--fg-faint); font-size: 11px; line-height: 1.5; }
+.section-title { font-size: 12px; color: var(--fg-dim); font-weight: 600; letter-spacing: .6px; text-transform: uppercase; margin: 0 0 8px; }
+
+/* ── 作战条（W-P0-1）────────────────────────────────────────
+   常驻在顶栏下方。四项都是「会改变下一步动作」的数，
+   按信条「不做仪表盘墙」≤4 项，且失败一律显示「—」不显示 0。 */
+.opsbar {
+  display: flex; align-items: center; gap: 18px;
+  flex: 0 0 auto;
+  padding: 0 22px; height: 40px;
+  border-bottom: 1px solid var(--line-soft);
+  background: linear-gradient(180deg, rgba(26,31,42,.55), rgba(15,19,26,.25));
+  overflow: hidden;
+}
+.opsbar .ops { display: inline-flex; align-items: baseline; gap: 7px; font-size: 12px; white-space: nowrap; min-width: 0; }
+.opsbar .ops.grow { flex: 1; min-width: 0; }
+.opsbar .ops em { font-style: normal; color: var(--fg-faint); font-size: 11px; letter-spacing: .3px; }
+.opsbar .ops b { font-weight: 600; color: var(--fg); font-size: 13px; }
+.opsbar .ops.urgent b { color: var(--bad); }
+.opsbar .ops .hint { font-size: 11px; }
+.opsbar .ops .ell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+
+/* ── 「下一刀」卡（W-P0-3）：对话空白态的主屏 ─────────────────────────────
+   设计意图：空白态不是「等待」，是「决策」。所以这一屏的主视觉是可点的三刀，
+   而不是一句「还没有对话」+ 1000px 死白。 */
+.emptychat { display: flex; flex-direction: column; gap: 14px; max-width: 760px; }
+.movecard {
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--panel); overflow: hidden;
+}
+.movecard .mh {
+  display: flex; align-items: baseline; gap: 12px;
+  padding: 10px 14px; border-bottom: 1px solid var(--line-soft);
+  background: linear-gradient(180deg, rgba(26,31,42,.5), rgba(15,19,26,.2));
+}
+.movecard .mt { font-size: 12px; letter-spacing: .5px; color: var(--accent); font-weight: 600; }
+.movecard .mp { font-size: 11px; color: var(--fg-dim); }
+.movecard .ms { font-size: 11px; color: var(--fg-faint); margin-left: auto; }
+.movecard .mempty { padding: 18px 14px; color: var(--fg-dim); font-size: 13px; }
+.movecard .mlist { list-style: none; margin: 0; padding: 6px 0; }
+.movecard .mrow + .mrow { border-top: 1px solid var(--line-soft); }
+.movecard .mbtn {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 10px 14px; background: transparent; border: 0; cursor: pointer;
+  text-align: left; color: var(--fg); font: inherit;
+}
+.movecard .mbtn:hover { background: var(--panel-2); }
+.movecard .mkind {
+  flex: 0 0 auto; font-size: 10px; letter-spacing: .4px;
+  padding: 2px 6px; border-radius: 4px;
+  border: 1px solid var(--accent-dim); color: var(--accent); background: var(--accent-soft);
+}
+.movecard .mtitle { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.movecard .mstr { flex: 0 0 auto; font-size: 11px; color: var(--fg-faint); letter-spacing: 1px; }
+.movecard .mwhy { padding: 0 14px 12px 14px; font-size: 12px; color: var(--fg-dim); line-height: 1.6; }
+.movecard .mwhy code { color: var(--fg); }
+.movecard .mwhy a { color: var(--accent); text-decoration: none; }
+.movecard .mwhy a:hover { text-decoration: underline; }
+
+/* ── flag 三态徽标（W-P0-2）：一眼分清「算分 / 待定 / 证伪」 ─────────────── */
+.tribadge {
+  flex: 0 0 auto; font-size: 10px; letter-spacing: .4px; padding: 2px 7px;
+  border-radius: 999px; border: 1px solid var(--line); color: var(--fg-dim);
+}
+.tribadge.verified { color: #3ddc97; border-color: rgba(61,220,151,.5); background: rgba(61,220,151,.1); }
+.tribadge.pending  { color: #e8c46a; border-color: rgba(232,196,106,.45); background: rgba(232,196,106,.1); }
+.tribadge.refuted  { color: var(--bad); border-color: rgba(255,107,107,.45); background: rgba(255,107,107,.1); }
+.node.tri { border-left: 2px solid transparent; padding-left: 10px; }
+.node.tri.verified { border-left-color: #3ddc97; }
+.node.tri.pending  { border-left-color: #e8c46a; }
+.node.tri.refuted  { border-left-color: var(--bad); }
+.trihead { display: flex; align-items: center; gap: 10px; }
+.trihead .ell { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trihead .mini {
+  flex: 0 0 auto; font-size: 11px; padding: 2px 8px; cursor: pointer;
+  background: transparent; border: 1px solid var(--line); border-radius: 5px;
+  color: var(--fg-dim); font-family: inherit;
+}
+.trihead .mini:hover { color: var(--fg); border-color: var(--accent-dim); }
+.prov { margin-top: 8px; }
+.prov .pre { max-height: 220px; overflow: auto; margin: 4px 0 10px; }
+
+
+/* ── 赛时/复盘 双模式（D-W1）：折叠区 + 模式按钮 ───────────────────────── */
+.nav .more { border-top: 1px solid var(--line-soft); margin-top: 6px; padding-top: 4px; }
+.nav .more > summary {
+  list-style: none; cursor: pointer; padding: 6px 10px;
+  font-size: 11px; color: var(--fg-faint); letter-spacing: .3px;
+}
+.nav .more > summary::-webkit-details-marker { display: none; }
+.nav .more > summary:hover { color: var(--fg-dim); }
+.nav .more[open] > summary { color: var(--accent); }
+.foot .modebtn {
+  font-size: 10px; padding: 2px 7px; cursor: pointer; font-family: inherit;
+  background: transparent; border: 1px solid var(--line); border-radius: 999px;
+  color: var(--fg-faint); letter-spacing: .5px;
+}
+.foot .modebtn:hover { color: var(--accent); border-color: var(--accent-dim); }
+
+
+/* ── 作战条 v2（2026-11-05）：分区 + 密度重排 ──────────────────────────────
+   原来四项平铺、右边一大片空；现在用发丝线分成三区，
+   时间给最大字号（第一变量），下一刀吃满剩余宽度，眼睛是一条扫下来的线。 */
+.opsbar {
+  display: flex; align-items: center; gap: 14px;
+  flex: 0 0 auto; padding: 0 18px; height: 38px;
+  border-bottom: 1px solid var(--line-soft);
+  background: linear-gradient(180deg, rgba(26,31,42,.55), rgba(15,19,26,.2));
+  overflow: hidden; font-variant-numeric: tabular-nums;   /* 数字不跳动，扫读才顺 */
+}
+.opsbar .ops { display: inline-flex; align-items: baseline; gap: 6px; font-size: 12px; white-space: nowrap; min-width: 0; }
+.opsbar .ops.grow { flex: 1; min-width: 0; }
+.opsbar .ops em { font-style: normal; color: var(--fg-faint); font-size: 10.5px; letter-spacing: .6px; text-transform: uppercase; }
+.opsbar .ops b { font-weight: 600; color: var(--fg); font-size: 13px; line-height: 1; }
+.opsbar .ops.time b { font-size: 15px; letter-spacing: .2px; }
+.opsbar .ops.urgent b { color: var(--bad); }
+.opsbar .ops.soon b { color: var(--warn); }
+.opsbar .ops .hint { font-size: 11px; color: var(--fg-faint); }
+.opsbar .ops .ell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.opsbar .ops .pill { height: 18px; padding: 0 6px; font-size: 10px; }
+/* 分区线：一条极淡的竖线，比留白更省空间，也比每次都摆分隔符干净 */
+.opsbar .ops-sep { flex: 0 0 1px; width: 1px; height: 16px; background: var(--line); opacity: .8; }
+/* 在跑指示：只有真有人在跑时才亮，亮=有活，不亮=没人干 */
+.opsbar .live-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--ok);
+  box-shadow: 0 0 8px rgba(61,220,151,.65); align-self: center;
+  animation: livedot 2s ease-in-out infinite;
+}
+@keyframes livedot { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+
+/* 窄屏（<1180px）先砍掉「每旗」这类次要数，保住时间与下一刀 —— 挤成一团比少看一个数更糟 */
+@media (max-width: 1180px) {
+  .opsbar { gap: 10px; padding: 0 14px; }
+  .opsbar .ops.optional { display: none; }
+}
+
+/* ── 状态页三栏的渐次入场（W-P1-3 配套）────────────────────────────────
+   三栏同时出现会让眼睛不知道先看哪；10/20/30ms 的延时足够建立阅读顺序，
+   又不至于让人觉得「界面在加载」。禁用动画偏好下自动关掉。 */
+.page .grid > .col:nth-child(1) { animation: colIn .18s ease-out both; }
+.page .grid > .col:nth-child(2) { animation: colIn .18s ease-out .04s both; }
+.page .grid > .col:nth-child(3) { animation: colIn .18s ease-out .08s both; }
+@keyframes colIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .page .grid > .col { animation: none !important; }
+  .opsbar .live-dot { animation: none !important; }
+}
+
+/* ── 卡片密度：默认 14px 内边距在 3 栏里显松，收紧到 12】────────────────── */
+.card { padding: 12px 13px; }
+.card h3 { margin-bottom: 8px; }
+
+/* ── 黑板三栏（W-P1-3 / 2026-11-05）────────────────────────────────────────
+   左 300 清单 / 中 1fr 事实流 / 右 320 概况与日志。
+   关键点：三栏各自滚动（min-height:0 + overflow:auto），
+   否则中栏节点一多就把日志挤出屏幕，赛中翻不到「刚发生什么」。 */
+.grid.k3 { grid-template-columns: 300px minmax(0, 1fr) 320px; gap: 14px; align-items: stretch; }
+.grid.k3 > .col { min-height: 0; }
+.card.fit { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.card.fit > .list, .card.fit > .loglist { flex: 1; min-height: 0; overflow: auto; }
+
+/* 清单行：一行三个信息 —— 状态点 / 名字 / 已核验比 */
+.item .it-line { display: flex; align-items: center; gap: 8px; }
+.item .it-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.item .it-n { font-family: var(--mono); font-size: 11px; color: var(--fg-faint); }
+.item.on .it-n { color: var(--accent); }
+.ells { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+
+/* ── 单行省略（.ell）：BenchPage / InspectPage 都在用，之前**没有全局定义** ────
+   后果：flag、last 输出这类长文本不省略，直接把卡片撑宽/撑出滚动条，
+   手机上横向溢出（用户 m00317 反馈「前端看不出来在干什么」的一部分原因就是排版散了）。
+   min-width:0 是 flex 子项能真正收窄的前提，缺了它 ellipsis 不生效。 */
+.ell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+/* 事实流：槽标题 + 三色左边框。左边框是这里唯一的重色，扫一眼就知道哪条算结论。 */
+.group {
+  font-size: 10.5px; letter-spacing: .7px; text-transform: uppercase;
+  color: var(--fg-faint); margin: 10px 0 4px; padding-bottom: 4px;
+  border-bottom: 1px dashed var(--line-soft);
+}
+.group:first-child { margin-top: 0; }
+.group.ok { color: var(--ok); }
+.group.warn { color: var(--warn); }
+.node.ks {
+  padding: 7px 10px; border-radius: var(--r-sm); background: var(--panel-2);
+  border: 1px solid transparent; border-left: 2px solid var(--line);
+  margin-bottom: 4px;
+}
+.node.ks.ok { border-left-color: var(--ok); background: rgba(61,220,151,.05); }
+.node.ks.warn { border-left-color: var(--warn); background: rgba(240,182,72,.05); }
+.node.ks .ks-head { display: flex; align-items: center; gap: 7px; font-size: 10.5px; color: var(--fg-faint); }
+.node.ks .ks-type {
+  font-family: var(--mono); text-transform: uppercase; letter-spacing: .4px;
+  padding: 0 5px; border-radius: 3px; background: var(--panel-3); color: var(--fg-dim);
+}
+.node.ks .ks-type.fact { background: rgba(89,167,255,.14); color: var(--accent); }
+.node.ks .ks-type.goal { background: rgba(240,182,72,.14); color: var(--warn); }
+.node.ks .ks-id { flex: 1; font-family: var(--mono); opacity: .65; }
+.node.ks .ks-state { font-family: var(--mono); }
+.node.ks .ks-state.ok { color: var(--ok); }
+.node.ks .ks-state.warn { color: var(--warn); }
+.node.ks .ks-text { font-size: 13px; line-height: 1.5; margin-top: 3px; word-break: break-word; }
+
+/* 日志行：时间只留时分秒（日期在赛中没有信息量），op 定宽对齐 */
+.loglist { display: flex; flex-direction: column; gap: 1px; }
+.logrow { display: flex; gap: 8px; align-items: baseline; font-size: 11.5px; padding: 3px 4px; border-radius: 4px; }
+.logrow:hover { background: var(--panel-2); }
+.logrow .at { color: var(--fg-faint); font-size: 10.5px; flex: 0 0 auto; }
+.logrow .op { color: var(--accent); font-size: 10.5px; flex: 0 0 auto; min-width: 84px; }
+.logrow .txt { color: var(--fg-dim); flex: 1; min-width: 0; }
+
+/* ── 工具事件卡（W-P1-2 / 2026-11-05）────────────────────────────────────
+   默认折叠成一行：▸ bash  strings vuln | grep flag          120ms  完
+   点开才看命令全文与输出尾部 4KB。理由：赛中屏幕稀缺，展开是主动行为；
+   但「这条 flag 是哪条命令打出来的」必须能一眼找到（AGENTS.md §4 复现要求）。 */
+.toolcard {
+  border: 1px solid var(--line); border-radius: var(--r-sm);
+  background: var(--panel); overflow: hidden; align-self: stretch; max-width: 100%;
+  border-left: 2px solid var(--line);
+}
+.toolcard.ok { border-left-color: var(--ok); }
+.toolcard.error { border-left-color: var(--bad); }
+.toolcard.running { border-left-color: var(--accent); }
+.tc-head {
+  display: flex; align-items: center; gap: 8px; width: 100%; height: auto;
+  padding: 6px 10px; background: transparent; border: 0; border-radius: 0;
+  text-align: left; font-size: 12px;
+}
+.tc-head:hover:not(:disabled) { background: var(--panel-2); }
+.tc-caret { color: var(--fg-faint); font-size: 10px; width: 10px; flex: 0 0 auto; }
+.tc-name { font-family: var(--mono); font-size: 11px; color: var(--accent); flex: 0 0 auto; font-weight: 600; }
+.tc-cmd {
+  flex: 1; min-width: 0; color: var(--fg-dim); font-size: 11.5px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tc-ms { color: var(--fg-faint); font-size: 10.5px; flex: 0 0 auto; }
+.tc-state { font-size: 10.5px; flex: 0 0 auto; padding: 0 5px; border-radius: 3px; }
+.tc-state.running { color: var(--accent); background: var(--accent-soft); }
+.tc-state.ok { color: var(--ok); background: rgba(61,220,151,.1); }
+.tc-state.error { color: var(--bad); background: rgba(255,107,107,.1); }
+.tc-body { border-top: 1px solid var(--line-soft); padding: 8px 10px 10px; background: var(--bg); }
+.tc-label { font-size: 10px; letter-spacing: .6px; text-transform: uppercase; color: var(--fg-faint); margin: 6px 0 3px; }
+.tc-label:first-child { margin-top: 0; }
+.tc-pre {
+  margin: 0; padding: 8px 10px; border-radius: var(--r-sm);
+  background: var(--panel); border: 1px solid var(--line-soft);
+  font-family: var(--mono); font-size: 11.5px; line-height: 1.55; color: var(--fg-dim);
+  white-space: pre-wrap; word-break: break-word; max-height: 320px; overflow: auto;
+}
+
+/* ── 报文高亮 + 有界预览（#42 / 2026-11-17）─────────────────────────────
+   工具卡输出与文件预览共用：状态行/头/body 分开着色，首屏只渲染 4KB。
+   颜色只做「分层」不做「判断」—— 红绿只标状态码区间，正文一个字都不改。 */
+.hb { display: flex; flex-direction: column; gap: 6px; }
+.hb-pre { max-height: 320px; overflow: auto; }
+.hb-status { font-weight: 700; }
+.hb-ok { color: var(--ok); }
+.hb-bad { color: var(--bad); }
+.hb-proto { color: var(--fg-faint); }
+.hb-reason { color: var(--fg-dim); }
+.hb-hname { color: var(--fg-faint); }
+.hb-colon { color: var(--fg-faint); }
+.hb-hval { color: var(--fg-dim); }
+.hb-key { color: var(--accent); }
+.hb-str { color: var(--gold); }
+.hb-num { color: #79b8ff; }
+.hb-lit { color: #c792ea; }
+.hb-more { margin-top: 4px; gap: 8px; align-items: center; font-size: 11px; }
+/* #41 定位回跳：被「定位调用」打中的那张卡必须一眼看出来是它（金色描边，不用动画免得抢注意力） */
+.toolcard.focus { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold-soft); }
+
+/* ── 知识库命中（W-P2-1）────────────────────────────────────────────────
+   展开一刀时顺手给「同题经验在哪」：分类 / 标题 / 文件:行号。
+   要的是指针不是正文 —— 赛中没时间读长文，需要的是「去哪看」。 */
+.kbhits { margin: 6px 0 2px; padding: 6px 8px; border-radius: var(--r-sm); background: var(--bg); border: 1px solid var(--line-soft); }
+.kbtitle { font-size: 10px; letter-spacing: .6px; text-transform: uppercase; color: var(--fg-faint); margin-bottom: 4px; }
+.kbrow { display: flex; align-items: baseline; gap: 7px; font-size: 11.5px; padding: 2px 0; }
+.kbcat { font-family: var(--mono); font-size: 10px; color: var(--accent); background: var(--accent-soft); padding: 0 4px; border-radius: 3px; flex: 0 0 auto; }
+.kbt { color: var(--fg-dim); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kbpath { font-family: var(--mono); font-size: 10px; color: var(--fg-faint); flex: 0 0 auto; }
+
+/* ── 对话列收窄（2026-11-05 密度收尾）──────────────────────────────────
+   1280+ 的屏上，一行文字拉满 1100px 读起来很累（超过 ~90 字符眼跳就丢行）。
+   正文与工具卡统一约束到 820px 并居中：内容不被摊薄，两侧留白反而是层级。
+   user 气泡仍靠右，但同样不越过这条线。 */
+.stream { max-width: 860px; margin: 0 auto; width: 100%; }
+.emptychat { max-width: 100%; }
+.msg { max-width: 100%; }
+
+/* 卡片内的次要信息再压一档：字号不加、颜色降一档，主次立刻分开 */
+.card > h3 .n, .ms, .hint { opacity: .85; }
+.kv dt { color: var(--fg-faint); }
+.kv dd { font-variant-numeric: tabular-nums; }
+
+/* 空白态（W-P1-3 收尾）：给下一步动作，不给一句【暂无数据】 */
+.empty.kbhint { line-height: 1.7; }
+.empty.kbhint .hint { margin-top: 6px; font-family: var(--mono); font-size: 11.5px; }
+.empty.kbhint code { font-size: 11.5px; color: var(--accent); }
+
+/* ── 运维动作（判读输出用）──────────────────────────────────
+   ★ 这个块存在的理由：按钮点完必须能看到「机器到底回了什么」，
+     否则用户只能相信我口头说「成功了」——那不叫闭环。 */
+.cmdout {
+  margin-top: 10px; max-height: 320px; overflow: auto;
+  background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: var(--r-sm); padding: 10px 11px;
+  font-family: var(--mono); font-size: 12px; line-height: 1.55;
+  white-space: pre-wrap; word-break: break-word;
+}
+.cmdout .bad { color: #ff8f8f; }
+.danger {
+  border-color: #5a2a2a !important; color: #ffb3b3 !important;
+}
+.danger:hover:not(:disabled) { background: #3a1f1f !important; border-color: #7a3a3a !important; }
+
+/* ── 就绪计数可对账（X-5）────────────────────────────────────
+   ★ 这个块存在的理由：就绪数字必须能点开看明细、缺项要指名道姓。
+     没有样式 = 表格挤成一坨、按钮看不出可点 —— 那等于没做。 */
+.tbl {
+  width: 100%; border-collapse: collapse; margin: 8px 0 6px;
+  font-size: 12.5px;
+}
+.tbl th, .tbl td {
+  text-align: left; padding: 6px 8px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.tbl th { color: var(--fg-dim); font-weight: 500; font-size: 11.5px; }
+.tbl td:last-child, .tbl th:last-child { text-align: right; }
+.tbl tr:last-child td { border-bottom: none; }
+
+.btn.sm {
+  padding: 3px 9px; font-size: 11.5px; border-radius: var(--r-sm);
+}
+.chip {
+  display: inline-block; margin: 0 4px 4px 0; padding: 1px 7px;
+  font-size: 11.5px; border-radius: 999px;
+  background: var(--panel-3); border: 1px solid var(--line);
+  color: var(--fg-dim); font-family: var(--mono);
+}
+.warn {
+  margin-top: 6px; padding: 8px 10px; font-size: 12.5px;
+  border-radius: var(--r-sm); border: 1px solid #5a4a2a;
+  background: #2a2418; color: #ffd9a0;
+}
+.drill {
+  margin-top: 10px; padding: 10px 11px;
+  border: 1px solid var(--line); border-radius: var(--r-sm);
+  background: var(--panel-2); font-size: 12.5px;
+}
+.drill ul { margin: 6px 0 8px; padding-left: 18px; }
+.drill li { line-height: 1.7; }
+
+
+
+/* ── 顶栏附加元素（v3.1）─────────────────────────────────── */
+.topbar .hint {
+  font-size: 11.5px; color: var(--fg-faint);
+  padding: 0 10px; letter-spacing: .2px;
+  user-select: none;
+}
+
+/* 模式徽标：赛时=青绿（作战态），复盘=暖金（非战时），一眼看出当前处境 */
+.badge.match  { color: var(--accent); border-color: var(--accent-dim); background: var(--accent-soft); }
+.badge.review { color: var(--gold);   border-color: #6b5a2e;         background: var(--gold-soft); }
+
+/* ── 空状态（v3.1）：页面没数据时给一句人话，而不是一片空白 ────────── */
+.empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; padding: 56px 24px; text-align: center;
+  border: 1px dashed var(--line); border-radius: var(--r);
+  background: linear-gradient(180deg, rgba(23,33,29,.5) 0%, transparent 100%);
+}
+.empty .etitle { font-size: 14px; font-weight: 600; color: var(--fg-dim); }
+.empty .edesc  { font-size: 12.5px; color: var(--fg-faint); max-width: 460px; line-height: 1.7; }
+.empty .eicon { font-size: 26px; opacity: .5; }
+
+/* 「更多」折叠区：加一点缩进，跟主分组区分开 */
+.nav details.more { margin-top: 10px; }
+.nav details.more summary {
+  cursor: pointer; padding: 6px 10px; font-size: 12px; color: var(--fg-faint);
+  border-radius: var(--r-sm); user-select: none;
+}
+.nav details.more summary:hover { background: var(--panel-2); color: var(--fg-dim); }
+.nav details.more[open] summary { color: var(--fg-dim); }
+
+/* ── 危险操作按钮（v3.2）：一键清空这类不可逆动作要跟普通按钮明显区分 ──── */
+button.danger {
+  color: var(--bad);
+  border-color: rgba(255, 107, 107, .38);
+  background: rgba(255, 107, 107, .08);
+}
+button.danger:hover:not(:disabled) {
+  color: #fff;
+  background: rgba(255, 107, 107, .22);
+  border-color: var(--bad);
+}
+button.danger:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}

@@ -1,0 +1,40 @@
+#!/bin/sh
+# pi-lab 交接包生成 —— 包装 <仓库根>/board/handover.py
+# 用法: handover [--out DIR] [--no-check] [--with-tests]
+# 说明见 <仓库根>/board/handover.py 顶部
+#
+# ★ 路径自解析（2026-10-12，适配发布包 / exe / 换目录）：原来写死 <仓库根>，
+#   打成交付包或换目录后直接找不到实现。从脚本自身位置推仓库根。
+# 解释器：python3 → python → py；可用 PI_LAB_PYTHON=<路径> 覆盖。
+
+self=$0
+case "$self" in
+  */*) : ;;
+  *) self=$(command -v -- "$self" 2>/dev/null || echo "$self") ;;
+esac
+
+_i=0
+while [ -L "$self" ] && [ "$_i" -lt 10 ]; do
+  _link=$(readlink "$self")
+  case "$_link" in
+    /*) self=$_link ;;
+    *)  self=$(dirname "$self")/$_link ;;
+  esac
+  _i=$((_i + 1))
+done
+
+HERE=$(cd "$(dirname "$self")" && pwd)
+ROOT=$(cd "$HERE/../.." && pwd)
+
+PY=${PI_LAB_PYTHON:-}
+if [ -z "$PY" ]; then
+  for _c in python3 python py; do
+    if command -v "$_c" >/dev/null 2>&1; then PY=$_c; break; fi
+  done
+fi
+if [ -z "$PY" ] || [ ! -f "$ROOT/board/handover.py" ]; then
+  echo "handover: 找不到 python 或 board/handover.py（$ROOT）—— 用 PI_LAB_PYTHON=<解释器> 指定" >&2
+  exit 127
+fi
+
+exec "$PY" "$ROOT/board/handover.py" "$@"

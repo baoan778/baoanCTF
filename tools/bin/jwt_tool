@@ -1,0 +1,5 @@
+#!/bin/bash
+SELF="$0"; . "$(cd "$(dirname "$0")/../libexec" && pwd)/labenv.sh"
+cd "$T/vendor/jwt_tool" || exit 1
+export PYTHONPATH="$T/vendor/jwt_tool:$T/vendor:${PYTHONPATH:-}"
+exec "$PY" "$T/vendor/jwt_tool/jwt_tool.py" "$@"

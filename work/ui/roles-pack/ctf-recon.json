@@ -1,0 +1,19 @@
+{
+  "name": "CTF 资料检索",
+  "kind": "agent",
+  "icon": "search",
+  "description": "只查不碰：writeup / 官方文档 / 工具用法 / 版本差异（运行定义见 .pi/agents/ctf-recon.md）",
+  "thinkingLevel": "low",
+  "_thinkingNote": "deepseek-flash 的 thinkingLevelMap 中 medium=null（provider 无此档），故降为 low 使其真正映射；改模型时如新模型支持 medium 可调回",
+  "tools": [
+    "read",
+    "web_search",
+    "fetch_content"
+  ],
+  "skills": [
+    "ctf-kit"
+  ],
+  "id": "ctf-recon",
+  "promptFile": "prompts/ctf-recon.md",
+  "formatVersion": 1
+}

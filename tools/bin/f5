@@ -1,0 +1,30 @@
+#!/bin/bash
+# f5 —— F5 隐写（java 实现；矩阵编码，抗卡方检测，CTF 隐写常见考点）
+#
+# 用法:
+#   f5 e <载体.bmp> <输出.jpg> -e <消息文件> -p <口令>     # 嵌入（载体必须无损：BMP/GIF/PNM）
+#   f5 d <stego.jpg> -p <口令>                             # 提取（结果写 output.txt）
+#
+# ★ 两个必须处理的坑（2026-10-10 实测，别再踩）:
+#   ① JpegEncoder 继承 awt.Frame → 无显示就 HeadlessException：走 xvfb-run 虚拟显示
+#      （且必须是完整 JRE —— default-jre-headless 没有 libawt_xawt.so）
+#   ② 代码用了 sun.security.provider.SecureRandom → 模块化后要
+#      --add-exports java.base/sun.security.provider=ALL-UNNAMED，否则 IllegalAccessError
+SELF="$0"; . "$(cd "$(dirname "$0")/../libexec" && pwd)/labenv.sh"
+set -uo pipefail
+JAR="$T/gobin/f5.jar"
+[ -f "$JAR" ] || lab_die "找不到 f5.jar（$JAR）"
+command -v java >/dev/null 2>&1 || lab_die "没有 java（容器镜像已带 default-jre；WSL 里 sudo apt-get install -y default-jre）"
+EX="--add-exports java.base/sun.security.provider=ALL-UNNAMED"
+RUNNER="$(command -v xvfb-run || true)"
+run() { if [ -n "$RUNNER" ]; then exec "$RUNNER" -a java $EX -mx40M -cp "$JAR" "$@"; else exec java $EX -mx40M -cp "$JAR" "$@"; fi; }
+case "${1:-}" in
+  e|embed)       shift; run Embed "$@" ;;
+  d|dec|extract) shift; run Extract "$@" ;;
+  *) cat <<'EOF'
+用法:
+  f5 e <载体.bmp> <输出.jpg> -e <消息文件> -p <口令>   # 嵌入
+  f5 d <stego.jpg> -p <口令>                           # 提取 → ./output.txt
+EOF
+     exit 2 ;;
+esac

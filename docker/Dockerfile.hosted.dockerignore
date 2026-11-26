@@ -1,0 +1,47 @@
+# Dockerfile.hosted 专用 ignore（Docker 自动识别 <dockerfile>.dockerignore）
+#
+# ★ 关键：这个文件会**完全替代**根 .dockerignore —— 根里排掉的大件必须在这里重抄一遍，
+#   否则 build context 会把 tools/venv(411MB) / tools/win(923MB) 全部打包进来。
+
+# ── 合规：历史 WP / 题解资料不得进镜像（平台须知第 6 条）──
+docs/writeups/
+docs/archive/
+docs/参考-*.md
+docs/调研/
+docs/ui-reference/
+docs/product/
+docs/*.png
+docs/学习-*.md
+docs/审计-*.md
+docs/复盘-*.md
+
+# ── 大而无用 / 宿主专用 ──
+vendor/
+源码/
+learning/
+learning-notes/
+bench/
+kb/
+log/
+work/
+workspace/
+.pi/
+.git/
+tools/venv/
+tools/venv-win/
+tools/win/
+tools/knowledge/
+tools/ctfpoc/
+tools/wordlists/
+**/__pycache__/
+**/*.pyc
+**/*.zip
+**/*.bak-*
+.env
+.env.*
+docker/*.bat
+docker/推送镜像*
+# ── 实测多余：agent-template/npm 24MB（宿主 npm 缓存）+ board/tests 924KB（沙箱不跑测试）──
+agent-template/npm/
+agent-template/extensions-extra/
+board/tests/

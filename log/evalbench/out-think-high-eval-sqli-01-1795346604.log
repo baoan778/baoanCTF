@@ -1,0 +1,6 @@
+FOUND_FLAG=flag{local-eval-sqli-3f9a1c}
+
+- 已确认：执行 `POST /login` 请求，username 使用 `admin'--` 即可通过 SQLi 登录；服务器返回 302 并跳转至 `/dashboard`，同时下发 `Set-Cookie: session=tok-admin-9f21`。
+- 已确认：携带该 cookie 访问 `/dashboard`，页面正文逐字包含 `flag{local-eval-sqli-3f9a1c}`。
+- 已证伪：`admin'#` 触发 SQLite 500 错误，说明未开启注释语法；普通弱口令则全部返回 401。
+- 还差什么：没有。

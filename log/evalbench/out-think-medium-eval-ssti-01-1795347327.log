@@ -1,0 +1,3 @@
+FOUND_FLAG=flag{local-eval-ssti-c58e12}
+
+确认：`/hello?name={{config}}` 直接回显 Flask config 中的 `FLAG` 值（Jinja2 SSTI 已用 `{{7*7}}`→`49` 验证）。逐字取得，未变形。

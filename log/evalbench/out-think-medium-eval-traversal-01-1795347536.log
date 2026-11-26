@@ -1,0 +1,7 @@
+FOUND_FLAG=flag{local-eval-traversal-4d90ab}
+
+路径穿越漏洞已确认：`/file?name=/tmp/flag.txt` 直接跨过目录边界返回了 flag。
+
+已确认：`/file?name=` 存在绝对路径与 `../` 路径穿越（`/etc/passwd` 可读），flag 位于 `/tmp/flag.txt`。
+已证伪：`/flag`、`/root/flag.txt`、`/app/flag.txt` 不存在。
+还差：无。

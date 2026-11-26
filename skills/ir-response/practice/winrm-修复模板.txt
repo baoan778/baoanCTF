@@ -1,0 +1,74 @@
+# 修复模板：备份 → 最小改动 → 复验（WinRM 一行一条）
+
+> 用在 FSM 的 **`eradicate`** 阶段。`triage` 阶段**只跑只读**（见 `winrm-三条线采集.txt`）。
+> 纪律：**任何改动前先留一份带时间戳的副本**；改动**最小化**；改完**立刻复验**并留证。
+>
+> 喂法（证据自动落盘）：
+> ```bash
+> PI_WINRM_EVIDENCE_DIR=work/<pid>/evidence winrm session <host> < 本文件
+> ```
+> 变量：`$f` = 要改的文件；`$u` = URL/服务名；`$rule` = 防火墙规则名。
+
+---
+
+## 0. 改动前：记录基线（改之前必须留一份，出问题才能对比/回滚）
+
+```
+$ts = Get-Date -Format yyyyMMdd-HHmmss
+"now = $ts"
+# 文件类：先只读拷贝 + 哈希（哈希是"证据"，副本是"回滚点"）
+Copy-Item "$f" "$f.bak.$ts" -Force
+Get-FileHash "$f" -Algorithm SHA256 | Select Path,Hash
+# 服务/任务/规则类：先导出定义
+Get-Service $u | Select Name,Status,StartType
+Get-ScheduledTask | ? TaskName -eq "$u" | Select TaskName,TaskPath,State
+```
+
+## 1. 最小改动（例子：每种都只动"一件事"）
+
+```
+# ① 停服务（不删、不卸载）
+Stop-Service $u -Force; Get-Service $u | Select Name,Status,StartType
+# ② 移除持久化点（不删文件，先禁用）
+Unregister-ScheduledTask -TaskName "$u" -Confirm:$false      # 或 Disable-ScheduledTask
+Remove-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run' -Name "$u" -EA SilentlyContinue
+# ③ 隔离文件（不删！移动到隔离目录并留哈希）
+$q = "C:\quarantine"; New-Item -ItemType Directory -Force $q | Out-Null
+Move-Item "$f" "$q\" -Force; Get-ChildItem $q | Select Name,Length,LastWriteTime
+# ④ 封外联（只加一条入站/出站规则）
+New-NetFirewallRule -DisplayName "$rule" -Direction Outbound -RemoteAddress <C2IP> -Action Block
+# ⑤ 改密码（若口令泄露：改完必须验证旧凭据失效）
+Set-LocalUser -Name "<acct>" -Password (Read-Host -AsSecureString "new password")
+```
+
+## 2. 改后复验（**这一步不能省**：不验证就等于没修）
+
+```
+# 文件/哈希是否真的变了（与第 0 节基线对比）
+Get-FileHash "$f" -Algorithm SHA256 -EA SilentlyContinue | Select Path,Hash
+# 持久化还残留吗（应为空）
+Get-ScheduledTask | ? TaskName -eq "$u"; Get-Service | ? Name -eq "$u"
+Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run' -EA SilentlyContinue
+# 外联还在吗（应为空）
+Get-NetTCPConnection -State Established | ? RemoteAddress -eq "<C2IP>"
+# 复查同一个 IOC（回到采集模板对应那条，重跑一遍）
+```
+
+## 3. 回滚（改动造成业务影响时）
+
+```
+Stop-Service $u -Force -EA SilentlyContinue
+Copy-Item "$f.bak.<ts>" "$f" -Force
+Start-Service $u -EA SilentlyContinue
+Get-Service $u | Select Name,Status
+```
+
+---
+
+## 铁律
+
+1. **不删日志、不重启主机、不卸载软件** —— 演练里重启常常把痕迹冲掉；
+2. **不删文件** —— 先移动隔离 + 记哈希（删了就不可逆，也没法做后续分析）；
+3. **一批多台时先打一台**：`winrm run <一台> '<该条命令>'` 确认无误 → 再 `session` 铺开；
+4. 每条命令的输出都在 `PI_WINRM_EVIDENCE_DIR` 里带时间戳落盘 —— 报告里直接引用文件路径；
+5. 拿不准就先问人（IR 的 HITL 闸门）：`contain` 与 `eradicate` 的动作**要有人点头**。

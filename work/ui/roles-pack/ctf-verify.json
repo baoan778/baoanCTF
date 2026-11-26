@@ -1,0 +1,17 @@
+{
+  "name": "CTF 结论复核",
+  "kind": "agent",
+  "icon": "shield",
+  "description": "专门找反例：独立重算、逐字核验候选 flag（运行定义见 .pi/agents/ctf-verify.md）",
+  "thinkingLevel": "max",
+  "tools": [
+    "read",
+    "bash"
+  ],
+  "skills": [
+    "ctf-kit"
+  ],
+  "id": "ctf-verify",
+  "promptFile": "prompts/ctf-verify.md",
+  "formatVersion": 1
+}

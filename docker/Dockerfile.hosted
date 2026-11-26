@@ -1,0 +1,100 @@
+# =============================================================================
+# Dockerfile.hosted —— TSecBench 托管评测镜像（目标 ≤3GB）
+#
+# 平台要求（来自 prepared 页原文）：
+#   · 上传 .tar/.tar.gz/.tgz，最大 3GB
+#   · 镜像启动后应自动开始解题
+#   · 沙箱 8C16G、无公网；模型须走平台网关（只支持三种基础 API）
+#   · 平台会注入环境变量（具体名单以创建任务后下发的凭证为准）
+#
+# 与全量镜像（docker/Dockerfile，15.7GB）的区别：只装「跑 agent 必需」，
+# 砍掉 nuclei 模板、浏览器、java、逆向全家桶等重型件。
+# =============================================================================
+FROM ubuntu:24.04
+# hadolint DL4006：RUN 里有管道时显式启用 pipefail，否则前半段失败会被吞掉
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+ENV DEBIAN_FRONTEND=noninteractive LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=Asia/Shanghai
+
+# 1) 基础 + 国内源
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+ && sed -i 's|http://archive.ubuntu.com|https://mirrors.tuna.tsinghua.edu.cn|g; s|http://security.ubuntu.com|https://mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list.d/ubuntu.sources \
+ && rm -rf /var/lib/apt/lists/*
+
+# 2) 运行 agent 必需的系统工具（不含重型逆向/取证件）
+# hadolint SC2015：原来写 `A && B && break || sleep 5`，C 段在 A 成功时也可能跑；
+# 改成显式 if，语义只有一种解释。重试 3 次仍失败就 fail 构建（不静默带病产出）。
+RUN set -eu; \
+    installed=0; n=0; \
+    while [ "$n" -lt 3 ]; do \
+      n=$((n + 1)); \
+      if apt-get update && apt-get install -y --no-install-recommends \
+           curl wget git jq unzip zip xz-utils file less procps \
+           python3 python3-pip python3-venv \
+           binutils netcat-openbsd iproute2 iputils-ping dnsutils \
+           openvpn openssl; then installed=1; break; fi; \
+      sleep 5; \
+    done; \
+    [ "$installed" = "1" ] || { echo '[fail] apt 重试 3 次仍失败'; exit 1; }; \
+    apt-get clean; rm -rf /var/lib/apt/lists/*
+
+# 3) node + pi（锁定版本，与仓库 vendor 同版）
+RUN set -eu; \
+    curl -fsSL --connect-timeout 20 -m 300 https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && npm config set registry https://registry.npmmirror.com \
+    && npm i -g @earendil-works/pi-coding-agent@1.5.0 \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* /root/.npm
+
+# 4) python 轻量弹药（重型件按需再加，先守住体积）
+RUN python3 -m pip install --no-cache-dir --break-system-packages \
+      --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
+      requests pycryptodome z3-solver pwntools 2>/dev/null || \
+    python3 -m pip install --no-cache-dir --break-system-packages --index-url https://pypi.tuna.tsinghua.edu.cn/simple requests pycryptodome
+
+# 5) 仓库内容（只带 agent 需要的）
+#
+# ★ 白名单式 COPY，不用 `COPY tools/`：实测整个 tools/ 会带进 win/ 923MB（Windows 二进制，
+#   容器里根本不能用）+ ctfpoc 26MB + knowledge 18MB + wordlists 22MB。
+#   其中 knowledge/ctf-wp 是**历史 WP**、ctfpoc 是**1.1 万条题解级 PoC** ——
+#   平台须知第 6 条明令「Agent 不可内置针对题目的历史答题记忆或解题方法」，
+#   打进镜像即构成违规风险，必须排除，而不是打完再删（删了也留在下层）。
+WORKDIR /opt/pi-ctf
+COPY skills/ ./skills/
+COPY agent-template/ ./agent-template/
+COPY prompts/ ./prompts/
+COPY board/ ./board/
+COPY AGENTS.md ./AGENTS.md
+COPY tools/*.py tools/
+COPY tools/*.mjs tools/
+COPY tools/*.sh tools/
+COPY tools/TOOLS.md tools/
+COPY tools/tool-registry.json tools/
+# AGENTS.md 里 13 处指向 docs/ —— 不 COPY 的话沙箱里全是死链。
+# 内容由 docker/Dockerfile.hosted.dockerignore 过滤（只留纪律类，排除历史 WP/题解）。
+COPY docs/ ./docs/
+COPY tools/bin ./tools/bin
+COPY tools/libexec ./tools/libexec
+COPY tools/hand ./tools/hand
+COPY tools/gobin ./tools/gobin
+
+# 5b) tools/bin/pi 是指向 vendor/pi 的包装脚本；托管镜像不 COPY vendor/ → 必须让位给全局 pi。
+#     实测：不移除时 `pi` 解析到包装脚本，报 Cannot find module '.../vendor/pi/dist/bundle/cli.js'。
+RUN rm -f /opt/pi-ctf/tools/bin/pi && /usr/bin/pi --version
+
+# 5c) 清掉包装器：它们的 shebang 指向 tools/venv（托管镜像没有 venv）或 Windows 工具。
+#     实测 10 个 rc=127：ROPgadget/checksec/cyclic/f5/pggdb/pwn/ropper/rsactf/z3/vol。
+#     留着只会让 agent 敲了报 command not found，却以为工具可用。
+WORKDIR /opt/pi-ctf/tools/bin
+RUN rm -f ROPgadget checksec cyclic f5 pggdb pwn ropper rsactf z3 vol && find . -maxdepth 1 -type f | wc -l
+WORKDIR /opt/pi-ctf
+
+# 5d) 沙箱不跑测试/不带宿主 npm 缓存（.dockerignore 已排，这里兜底删残留）+ 建日志目录
+RUN rm -rf /opt/pi-ctf/board/tests /opt/pi-ctf/agent-template/npm /opt/pi-ctf/agent-template/extensions-extra \
+ && mkdir -p /opt/pi-ctf/log && echo cleaned
+
+# 6) 入口：启动后按平台注入的环境变量自动开始解题
+COPY docker/hosted-entrypoint.sh /usr/local/bin/hosted-entrypoint.sh
+RUN chmod +x /usr/local/bin/hosted-entrypoint.sh
+ENV PI_LAB_ROOT=/opt/pi-ctf
+ENV PATH=/opt/pi-ctf/tools/bin:$PATH
+ENTRYPOINT ["/usr/local/bin/hosted-entrypoint.sh"]

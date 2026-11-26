@@ -1,0 +1,3 @@
+已确认 flag 直接出现在管理员 dashboard 中。
+
+FOUND_FLAG=flag{local-eval-sqli-3f9a1c}

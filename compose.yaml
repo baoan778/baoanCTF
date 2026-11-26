@@ -1,0 +1,183 @@
+# =============================================================================
+# PiCTF WebUI —— Docker Compose
+#
+# 用法：
+#   1) cp .env.example .env   → 填 DEEPSEEK_API_KEY
+#   2) docker compose up -d --build
+#   3) 浏览器开 http://127.0.0.1:30142/
+#
+# 密钥注入：env_file: .env（只在宿主，被 .gitignore/.dockerignore 排除）
+#          —— 容器 inspect 里不会出现明文（值在宿主文件里，Compose 只传环境变量）
+# =============================================================================
+services:
+  pictf:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: pictf-webui:0.2.4
+    container_name: pictf
+    ports:
+      - "127.0.0.1:30142:30142"
+    # gdb 断点 / ptrace 必需；NET_ADMIN 给 openvpn 建 tun / 改路由用
+    # （★ 2026-11-04 加 NET_ADMIN：容器内起隧道缺它一定失败；不跑 tsec vpn up 就无副作用）
+    # ★ 2026-11-14 修 P2-8（实测）：PID1 是 node，没有 reaper → 僵尸堆到 60+ 个
+    #   （bash/curl/sleep/sage-cleaner/openvpn 全变 <defunct>，2 小时就攒出来）。
+    #   6h 跑分 + 频繁派子代理会持续涨，且僵尸 comm 仍叫 openvpn，会把「隧道在跑」判断带偏。
+    #   init: true 让 docker 塞一个 tini 当 PID1 负责回收。
+    init: true
+    cap_add:
+      - SYS_PTRACE
+      - NET_ADMIN
+    # ★ 2026-11-13：NET_ADMIN 只给「能建 tun」的权限，**设备节点本身得映射进来**。
+    #   实测：容器里 ls /dev/net → No such file，`tsec vpn up` 直接崩；
+    #   手动 `mkdir -p /dev/net && mknod … && ip tuntap add` 能成功 —— 说明差的只是节点。
+    #   不映射的话每次 docker compose up 重建容器都要人肉补一遍，等于埋雷。
+    devices:
+      - "/dev/net/tun:/dev/net/tun"
+    security_opt:
+      - seccomp=unconfined
+    # 让容器内的 root 也受 namespace 限制；同时把默认 shm 调大（pwntools/tensor 之类要）
+    shm_size: "512m"
+    env_file:
+      - .env
+    environment:
+      # 容器内固定路径（与 Dockerfile ENV 一致，写在这里便于 override 时一眼看清）
+      PI_LAB_ROOT: /opt/pi-ctf
+      PI_LAB_KB_DIR: /opt/pi-ctf/kb
+      PI_CODING_AGENT_DIR: /home/ctf/.pi-ctf/agent
+      PI_SESSION_DIR: /home/ctf/.pi-ctf/sessions
+      PI_CODING_AGENT_SESSION_DIR: /home/ctf/.pi-ctf/sessions
+      # ★ 2026-11-05 实测结论（改过一次又改回来，别再来第二遍）：
+      #   把这里改成 127.0.0.1 会让**宿主彻底连不上**（实测 curl 000，容器内自访 200）。
+      #   原因：docker -p 的转发目标是容器的 eth0（172.18.0.2:30142），不是容器 loopback；
+      #   容器只监听 127.0.0.1 时，端口映射这一跳打不进来 —— 界面对宿主直接消失。
+      #   真正的收敛点在上面那行 ports：它绑的是 **127.0.0.1:30142**，所以外部网络本来就进不来，
+      #   容器内监听 0.0.0.0 只影响「谁能从容器网络里访问」，而那是本机单机环境、无第三方容器。
+      #   → 结论：保持 0.0.0.0，安全边界由宿主端口映射保证，不靠这一行。
+      UI_HOST: 0.0.0.0
+      UI_PORT: "30142"
+      # ★ 2026-11-18：口令闸门整条通路已从代码里删除（不是关闭），此处不再有任何开关。
+      #   安全边界：下面那行 ports 绑 127.0.0.1（外网进不来）+ 同源校验 sameOrigin() 挡跨站写。
+      # ★ 2026-11-13：平台跑分 token / 端点改由**环境变量注入**，优先级高于
+      #   <repo>/.pi/tsecbench.json（tsecbench.py:113-114 先读 env 再读文件）。
+      #   配合 .dockerignore 里新加的 .pi/ —— token 不再落在镜像层里，
+      #   换 token 也不用重建镜像，改 .env 重启容器即可。
+      #   .env 里没这两行时为「空串」，tsec 会回退去读文件（老行为不变）。
+      TSEC_BASE_URL: ${TSEC_BASE_URL:-}
+      TSEC_TOKEN: ${TSEC_TOKEN:-}
+      # ★ 2026-11-13：token 文件从镜像里挪到持久化卷，并显式指过去。
+      #   原因：/opt/pi-ctf/.pi/tsecbench.json 是 `COPY .` 打进镜像层的（实测 docker run 能 cat 出来），
+      #   而镜像 16GB 且 push 脚本还在 —— 等于把平台 token 随镜像分发。
+      #   .dockerignore 已加 .pi/（下次构建不再带入）；这条保证**已构建的旧镜像**也读不到那份。
+      PI_LAB_TSEC_CONFIG: /home/ctf/.pi-ctf/agent/tsecbench.json
+      # ★ 2026-11-20 P0：VPN 工作目录挪进持久化卷。
+      #   改前 tsbench.py 的 _vpn_dir() 在容器里落到 ~/.tsec = /home/ctf/.tsec，
+      #   那是**容器可写层**：一旦 force-recreate 就整个消失，而 tsecbench.json
+      #   （在 pictf-agent 卷里）还记着 vpn_file=/home/ctf/.tsec/run-*.ovpn →
+      #   隧道永远起不来，且报错是「ovpn 文件不存在」，看着像用户没上传配置。
+      #   实测 2026-11-20 重建容器后 /home/ctf/.tsec 完全消失。
+      #   _vpn_dir() 本来就优先读这个 env（tools/tsecbench.py:727-731），所以只改这里。
+      TSEC_VPN_DIR: /home/ctf/.pi-ctf/tsec
+      TZ: Asia/Shanghai
+    volumes:
+      # ══════════════════════════════════════════════════════════════════════
+      # ★★ 2026-11-12 挂载点治本：不再逐个文件列，改成**整目录挂载**
+      #
+      # 为什么改：此前 compose 里手写了 60+ 条逐文件挂载（board/fgs.py、
+      # tools/xxx.py 一条条列），结果是**每次新增/改动文件都可能漏挂**，
+      # 而漏挂的表现是「宿主改了、容器没变、测试红得莫名其妙」，极难归因。
+      # 实测踩到 4 次：board/*.py → AGENTS.md → server.mjs → tools/*.py（28 个）。
+      #
+      # 现在的规则：**源码目录整挂**，只把「宿主不能覆盖容器」的东西单独隔开：
+      #   · tools/venv   —— 宿主那份是 WSL 建的坏 venv（pyvenv.cfg 指 /home/breakingbad，
+      #                    bin/python 是死链），整挂会把镜像里装好的依赖盖掉 →
+      #                    用**具名卷**盖在它上面，容器用自己的那份。
+      #   · work/ui/web  —— 宿主没有 node_modules，整挂会让前端跑不起来 →
+      #                    只挂源码子目录（src/public/index.html）+ dist **只读挂**。
+      #   · board/projects / log / kb / workspace —— 运行时可写，照旧。
+      # ══════════════════════════════════════════════════════════════════════
+
+      # ── 持久化卷 ──
+      - pictf-agent:/home/ctf/.pi-ctf
+
+      # ── 源码（整目录，只读）──
+      #   ★ 用绝对路径不用相对路径：实测 `./tools` 在子目录 compose 里会被解析成
+      #     `D:\`（盘根）而不是仓库下，容器里看到的是盘根同名目录 —— 极难发现。
+
+      # ── 运行时（可写）──
+      - ./workspace:/opt/pi-ctf/workspace
+      - ./board/projects:/opt/pi-ctf/board/projects
+      - ./log:/opt/pi-ctf/log
+      - ./kb:/opt/pi-ctf/kb
+      - ./work/intake:/opt/pi-ctf/work/intake
+      # ★ 2026-11-20 P0：work/solve 必须挂出来 —— 它是**解题的全部状态**：
+      #   <code>/*.jsonl（会话取证）、ledger.json（attempts/耗时/ROI 账本）、
+      #   queue.txt（本轮队列）、_platform_cache.json（平台题单滚动缓存）、
+      #   _quarantine/（中毒会话隔离区）、_wrapup/（收尾轮产物）。
+      #   改前它只在容器可写层：**docker compose up --force-recreate 一次全没**
+      #   （实测 2026-11-20 重建容器后 work/solve 与 archive-* 整个消失，
+      #     实况页从「75/104、14 条出旗」退化为空，限时赛里等于进度归零）。
+      #   挂成 bind mount 还顺带解决取证：宿主 grep/less 直接看，不用 docker exec。
+      #   代价实测（9p）：300 次追加 1310ms vs 容器层 583ms —— 慢 2.2 倍，
+      #   但会话 jsonl 是「每轮几步」的量级，不是热点写入，可忽略。
+      - ./work/solve:/opt/pi-ctf/work/solve
+
+      # ── 用整仓只读挂载 + 逐目录 link，避免 60 条手写 ──
+      - ./board:/opt/pi-ctf/board:ro
+      - ./skills:/opt/pi-ctf/skills:ro
+      - ./docs:/opt/pi-ctf/docs:ro
+      # ★ 2026-11-26：删掉 learning/ learning-notes/ 学习清单.md learning-checklist.md
+      #   四条挂载 —— 那四份内容不再随仓库分发（开源交付只留产品，不留开发过程记录）。
+      #   留着会变成**悬空挂载点**：宿主路径不存在，容器里出现空目录，容易被误读成"文件丢了"。
+      - ./agent-template:/opt/pi-ctf/agent-template:ro
+      - ./prompts:/opt/pi-ctf/prompts:ro
+      - ./templates:/opt/pi-ctf/templates:ro
+      - ./AGENTS.md:/opt/pi-ctf/AGENTS.md:ro
+      # ★ 2026-11-12 补：compose.yaml 之前**没挂载** → 容器里留的是镜像内旧快照
+      #   （实测容器 1ad19af / 宿主 7d626c0，容器里还写着 0.2.3 而实际跑 0.2.4）。
+      #   风险：排查时在容器内 grep compose.yaml 会读到过期版本，把人带偏
+      #   （本次排查就被带偏过一轮）。挂上让它永远等于宿主那份。
+      - ./compose.yaml:/opt/pi-ctf/compose.yaml:ro
+
+      # ── tools：整目录挂载（治本核心）──
+      - ./tools:/opt/pi-ctf/tools
+      #   ★ 关键：用**具名卷**盖住 tools/venv ——
+      #     宿主那份是 WSL 建的坏 venv（bin/python 死链），不能让它盖掉镜像里装好的。
+      #     具名卷「首次挂载时用镜像内容初始化」，所以容器拿到的是自己那份 venv。
+      - pictf-venv:/opt/pi-ctf/tools/venv
+
+      # ── work/ui：挂源码 + dist（只读），不挂 node_modules ──
+      - ./work/ui/server.mjs:/opt/pi-ctf/work/ui/server.mjs:ro
+      - ./work/ui/web/src:/opt/pi-ctf/work/ui/web/src:ro
+      - ./work/ui/web/public:/opt/pi-ctf/work/ui/web/public:ro
+      - ./work/ui/web/index.html:/opt/pi-ctf/work/ui/web/index.html:ro
+      - ./work/ui/web/package.json:/opt/pi-ctf/work/ui/web/package.json:ro
+      - ./work/ui/web/vite.config.ts:/opt/pi-ctf/work/ui/web/vite.config.ts:ro
+      - ./work/ui/build.sh:/opt/pi-ctf/work/ui/build.sh:ro
+      # ★ 2026-11-18：dist **改成只读挂载** —— 此前它不挂，运行时用的是镜像层那份。
+      #   实测事故：镜像 11-13 建，层里躺着一份**带已删口令闸门**的老 bundle，
+      #   而容器可写层与宿主都是新 bundle → 只要 docker compose up --force-recreate
+      #   （**不 build**）就静默退回老前端：不白屏，只有口令框悄悄回来。
+      #   挂上之后「容器跑的那份 == 宿主 git 跟踪的那份」，镜像层再旧也影响不到运行时。
+      #   代价：容器里不能直接 vite build 写 dist（只读）→ 改用 `uibuild`
+      #   （tools/hand/uibuild：容器内构建到 /tmp → 校验 → 回填宿主，宿主变了容器立刻可见）。
+      - ./work/ui/web/dist:/opt/pi-ctf/work/ui/web/dist:ro
+      # ★ 2026-11-13：roles-pack 之前**没挂** —— 它是角色预设包（UI「重置角色」用），
+      #   容器里一直是镜像构建时那份旧副本。症状：agent-template/roles 早改成 low，
+      #   roles-pack 里还是 medium，而容器内测试读到的是后者 → 看着像仓库漂移，其实是没挂。
+      #   只挂这一个子目录（不整挂 work/ui），保持「不挂 node_modules」的约定（dist 见上）。
+      - ./work/ui/roles-pack:/opt/pi-ctf/work/ui/roles-pack:ro
+
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:30142/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 40s
+      retries: 3
+
+volumes:
+  pictf-agent:
+  # ★ 2026-11-12：容器自己的 venv，盖住宿主那份坏 venv（bin/python 是死链）。
+  #   具名卷首次挂载时用镜像内容初始化 → 容器拿到镜像里装好的依赖。
+  pictf-venv:

@@ -1,0 +1,8 @@
+{"ts":"2026-11-23T06:11:14.944Z","action":"compact-before","pid":null,"reason":"threshold","tokens_before":42548}
+{"ts":"2026-11-23T06:11:51.013Z","action":"compact-done","pid":null,"reason":"threshold"}
+{"ts":"2026-11-23T07:36:14.440Z","action":"compact-before","pid":null,"reason":"threshold","tokens_before":63869}
+{"ts":"2026-11-23T07:36:40.267Z","action":"compact-before","pid":null,"reason":"threshold","tokens_before":63869}
+{"ts":"2026-11-23T07:42:23.948Z","action":"compact-before","pid":null,"reason":"threshold","tokens_before":63869}
+{"ts":"2026-11-23T07:42:46.607Z","action":"compact-done","pid":null,"reason":"threshold"}
+{"ts":"2026-11-23T07:45:18.771Z","action":"compact-before","pid":null,"reason":"threshold","tokens_before":63869}
+{"ts":"2026-11-23T07:47:33.291Z","action":"compact-done","pid":null,"reason":"threshold"}

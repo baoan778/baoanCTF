@@ -1,0 +1,8 @@
+#!/bin/bash
+# vol —— Volatility 3（记忆镜像取证）
+# 为什么需要 wrapper：vol3 装在 venv 里（tools/venv/bin/vol），不在 PATH 上
+SELF="$0"; . "$(cd "$(dirname "$0")/../libexec" && pwd)/labenv.sh"
+BIN="$T/venv/bin/vol"
+[ -x "$BIN" ] || BIN="$(command -v vol.py || command -v vol || true)"
+[ -n "$BIN" ] || lab_die "volatility3 没装（install.sh / 镜像构建会装到 tools/venv/bin）"
+exec "$BIN" "$@"

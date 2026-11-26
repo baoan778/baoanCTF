@@ -1,0 +1,3 @@
+FOUND_FLAG=flag{local-eval-sqli-3f9a1c}
+
+已通过 `/login` 处的 SQLi 完成认证绕过（`admin'--` 会签发 `session=tok-admin-9f21`），随后从 `/dashboard` 直接读取 flag。

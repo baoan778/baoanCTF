@@ -1,0 +1,3 @@
+FOUND_FLAG=flag{local-eval-sqli-3f9a1c}
+
+已确认：`/login` 存在 SQL 注入登录绕过，`username=admin'--` 或 `' or 1=1--` 可拿到 `session=tok-admin-9f21`；`/dashboard` 返回 flag：`flag{local-eval-sqli-3f9a1c}`。

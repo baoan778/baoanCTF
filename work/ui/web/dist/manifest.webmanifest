@@ -1,0 +1,13 @@
+{
+  "name": "PiCTF",
+  "short_name": "PiCTF",
+  "start_url": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay"],
+  "theme_color": "#0f1115",
+  "background_color": "#0f1115",
+  "icons": [
+    { "src": "/pictf-256.png", "sizes": "256x256", "type": "image/png" },
+    { "src": "/pictf.ico", "sizes": "256x256", "type": "image/x-icon" }
+  ]
+}

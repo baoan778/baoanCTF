@@ -1,0 +1,19 @@
+#!/bin/bash
+# testcount —— 测试数量「单一可写点」（实现 <仓库根>/tools/testcount.py）
+#
+# 为什么要有它：docs/状态快照.md 里的 "N 条全绿" 是 selfcheck 4b 的锚点，
+# 但历史上散在两处、要人手改 —— 改一处漏一处就变成假红。本包装把它变成一条命令。
+#
+# 路径自解析（同 skilllint 的做法，适配发布包 / 换目录）。
+T="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+if [ -n "${PI_LAB_PYTHON:-}" ]; then
+  PY="$PI_LAB_PYTHON"
+else
+  PY="$T/venv/bin/python"
+  [ -x "$PY" ] || PY="$(command -v python3 || command -v python)"
+fi
+if [ -z "$PY" ] || [ ! -f "$T/testcount.py" ]; then
+  echo "testcount: 找不到 python 或 $T/testcount.py（可用 PI_LAB_PYTHON 指定解释器）" >&2
+  exit 127
+fi
+exec "$PY" "$T/testcount.py" "$@"

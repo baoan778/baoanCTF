@@ -1,0 +1,8 @@
+#!/bin/bash
+# verify_claim：结论分级闸门：报缺陷前登记证据等级
+SELF="$0"; . "$(cd "$(dirname "$0")/../libexec" && pwd)/labenv.sh"
+# ★ 2026-11-17 修：原来写 exec "$ROOT/tools/verify_claim.py" —— MSYS 下 bash 会把这个 .py
+#   当成 shell 脚本直接跑（报 `import: command not found`、`syntax error near ...`），
+#   于是这个入口一直是坏的，而调用方多半直接 python3 tools/xxx.py，所以没人发现。
+#   与 llmrec / wpfetch / skilllint 等统一：显式用 labenv 解析出的 $PY 启动。
+exec "$PY" "$T/verify_claim.py" "$@"

@@ -1,0 +1,68 @@
+# NOTICE · 第三方组件与内容
+
+本项目自身代码以 **MIT** 许可发布（见 `LICENSE`），
+Copyright (c) 2026 baoan778 <2363799073@qq.com> · https://github.com/baoan778
+
+下列内容为第三方资产，**不适用**本项目的 MIT 许可，版权归各自作者。
+
+---
+
+## 1. pi 运行时（**不随本仓库分发**）
+
+- 包名：`@earendil-works/pi-coding-agent`
+- 许可：**MIT**
+- 说明：**2026-11-24 起不再 vendored 进仓库**（原 `vendor/pi` 共 167MB，
+  其中 141MB 是 node_modules）。使用者通过 npm 安装：
+
+  ```bash
+  npm i -g @earendil-works/pi-coding-agent --registry=https://registry.npmmirror.com
+  ```
+
+  `tools/bin/pi` 会按「系统 PATH → 全局 npm → 包内 vendor（老包兼容）」三级回退。
+
+  **为什么移除**：`install.sh` 与 Docker 都从 npm 装 pi，从未用过 `vendor/pi`；
+  它只是离线兜底，却占了仓库 167MB。开源版按标准 npm 方式分发。
+
+- 历史核查记录（移除前的全量扫描，留作参考）：
+  153 个内嵌依赖包全部为宽松许可（MIT 64 / Apache-2.0 40 / BSD-3-Clause 13 / ISC 7 等），
+  **无 GPL / AGPL / SSPL**。
+
+## 2. vendor/node —— 可选 Node 运行时
+
+- 许可：**MIT**（Node.js 本体）
+- 说明：`install.sh` 优先用系统 Node，装不上才回退到这里；
+  `vendor/node/` 的实际二进制**未纳入 git**（见 `.gitignore`），
+  仅在本地安装时由 `install.sh` 下载。
+
+## 3. tools/knowledge/riftx —— RiftX 安全技能包
+
+- 名称：RiftX recommended-skills（Web 安全测试方法论 + 载荷字典）
+- 许可：**MIT**，Copyright (c) 2026 Ch1nfo
+- 完整许可原文见 `tools/knowledge/riftx/LICENSE-RiftX-MIT.txt`
+- 使用说明：作为本地检索资料，**不修改其内容**
+
+## 4. tools/knowledge/ —— 其他资料
+
+包含公开技术文章摘录、选手经验整理、常见密码字典（来源含 NCSC / 公开泄漏集统计）。
+版权归**原作者**；本项目仅作索引与检索，保留来源链接。
+每条记录保留出处；如需删除某条请提 issue。
+
+## 5. tools/vendor/ —— 第三方安全工具源码
+
+`tools/vendor/` 下的 CMSeeK / GitHack / JSFinder / SSRFmap / XSStrike / jwt_tool 等
+是各自作者的独立项目，版权归原作者，许可见各目录内的 LICENSE。
+
+## 6. 模型与 API
+
+本项目**不附带**任何 LLM 模型权重或 API 密钥。
+使用者需自备 OpenAI 兼容端点（baseUrl + apiKey）。
+
+---
+
+## 给再分发者的提醒
+
+如果你要把本项目打包成发行版（docker 镜像 / zip / exe）：
+
+1. 若你自行 vendored 了 pi 运行时，保留其 `package.json` 里的 license 字段
+2. `tools/knowledge/riftx/LICENSE-RiftX-MIT.txt` **必须保留**
+3. 本 `NOTICE` 文件必须随包分发

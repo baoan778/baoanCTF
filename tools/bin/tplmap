@@ -1,0 +1,6 @@
+#!/bin/bash
+T="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+PY="$T/venv/bin/python"
+cd "$T/vendor/tplmap" || exit 1
+export PYTHONPATH="$T/vendor/tplmap:${PYTHONPATH:-}"
+exec "$PY" "$T/vendor/tplmap/tplmap.py" "$@"

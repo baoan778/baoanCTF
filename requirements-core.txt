@@ -1,0 +1,36 @@
+# PiCTF 核心依赖 —— **精确锁定**（pip freeze 口径）
+#
+# 用法：pip install -r requirements-core.txt
+#
+# ★ 为什么精确锁定（2026-11-24）：原先用区间约束（>=4.15,<5），
+#   仍会随时间装出不同版本 —— 「在我这能跑」就成了所有 issue 的默认答复。
+#   下面每个版本都是**实测通过全套 150 条回归**的那一个。
+#
+# ★ 升级流程：
+#   pip install -U <pkg>  →  跑 bash tools/bin/selfcheck（全套）
+#   →  全绿才把新版本号写回这里  →  git commit 'deps: bump <pkg>'
+#   不要「顺手升级」：本项目的判据对库行为敏感（见 docs/经验-工程纪律.md）。
+#
+# ★ board/fgs.py 本身**零第三方依赖**（纯 stdlib），这条是硬约束。
+
+# ── pwn ──
+pwntools==4.15.0
+capstone==6.0.0a11
+unicorn==2.1.2
+ropgadget==7.7
+
+# ── crypto ──
+z3-solver==5.3.3.0
+pycryptodome==4.3.0
+gmpy2==2.3.2
+sympy==1.14.0
+cryptography==50.0.2
+ecdsa==0.19.2
+
+# ── web / 网络 ──
+requests==2.34.2
+pysocks==1.7.1
+beautifulsoup4==4.15.0
+
+# ── 可选（未在基准机安装，需要时自行加） ──
+# libnum          # 部分 crypto 题用；装上后请补进上面的锁定段

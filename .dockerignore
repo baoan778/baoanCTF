@@ -1,0 +1,110 @@
+# ── 绝不能进镜像的东西（密钥）──
+.env
+.env.*
+!.env.example
+#   ★ 2026-11-13 补：.pi/ 之前**没排**，而 Dockerfile 是 `COPY . /opt/pi-ctf`，
+#     于是宿主 .pi/tsecbench.json（平台 BENCHMARK_TOKEN）被原样打进镜像层 ——
+#     `docker run --rm --entrypoint bash pictf-webui:0.2.4` 能直接 cat 出来。
+#     镜像 16GB 且 push 脚本还在，这等于把平台 token 连同镜像一起分发。
+#     .gitignore 里有 .pi/* 只挡 git，挡不住 docker build —— 两套规则别记混。
+.pi/
+.pi
+tsecbench.json
+**/nccsec-token
+**/kimi-token
+**/auth.json
+*.bak-mswitch
+**/*.bak-*
+
+# ── VPN 配置 / 靶场检材（2026-11-20 加）──
+#   ★ 实测：`测试靶场/` 从来没被排过，而 Dockerfile 是 `COPY . /opt/pi-ctf`，
+#     于是 task_2026xxx_vpn_config.ovpn（内含 ca/cert/key/tls-auth 四段私钥）
+#     被原样打进镜像层 —— 与 2026-11-13 那次 .pi/tsecbench.json 泄漏是同一类事故。
+#     这个目录里只有两份东西：SDK_API.md（文档，容器本来也不用）与 .ovpn（凭据）。
+#     运行期取 VPN 配置的方式是 `docker cp` 到 /home/ctf/.pi-ctf/tsec/run-current.ovpn，
+#     从来不读 /opt/pi-ctf/测试靶场/ —— 所以整目录排掉不影响任何功能。
+*.ovpn
+测试靶场/
+
+# ── 运行时产物 / 大而无用 ──
+.git
+**/__pycache__
+**/*.pyc
+board/projects/*
+workspace/*
+work/ui/.last-session.json
+log/*.log
+**/*.log
+
+# ── 镜像内不用的宿主运行时（容器自带 node 22）──
+vendor/node/
+
+# ★ 2026-11-24：vendor/pi 已从仓库移除（开源瘦身 167MB）。
+#   这里排除它，是为了兼容「使用者本地还留着老版本 vendor/pi」的情况 ——
+#   镜像里 pi 由 Dockerfile 的 npm i -g 提供（1.5.0），不需要宿主那份。
+#   不排的话 COPY . 会把 173MB 带进镜像，白涨体积。
+vendor/pi/
+
+# ── 宿主侧装出来的 venv：绝不能带进镜像（shebang 指向宿主 HOME，容器里必崩）──
+#   tools/venv     = WSL/Linux 版
+#   tools/venv-win = Windows 版（482MB）
+#   ★ 2026-11-11 补：原来只排了 tools/venv，漏了 venv-win。重建镜像时 COPY . 把它
+#     带进容器（482MB），而 tools/libexec/labenv.sh 又**优先**选
+#     tools/venv-win/Scripts/python.exe → 容器里 exec 一个 Windows 路径 →
+#     「cannot execute: required file not found」→ py/kb/sage 全部失效，
+#     selfcheck 报「py 弹药不可用」。两个都必须排。
+tools/venv/
+tools/venv-win/
+#   ★ 2026-11-18 补（实测：docker compose build 直接失败）：
+#     tools/venv-sdk/bin/python 的**三个符号链接**（python / python3 / python3.12）
+#     指向 /usr/local/bin/python3.12 —— 而 venv 是在**容器里**建的
+#     （pyvenv.cfg: command = /usr/bin/python3 -m venv /opt/pi-ctf/tools/venv-sdk），
+#     经 rw 的 tools 挂载写回了宿主。宿主 Windows 侧这些目标不存在 → 悬空链接。
+#     buildkit 加载上下文时报 invalid file request tools/venv-sdk/bin/python，
+#     整个 build 在 #6 就死掉（还没进任何一层）。宿主的这份 venv 本来也没人用
+#     （全仓零引用，只有 .gitignore:128 挡着），容器里那份在 tools 挂载卷上、不受影响。
+tools/venv-sdk/
+
+#   ★ 2026-11-18 补：Windows 侧原生工具（949MB：mingw64/gdb/socat 全是 PE32+ 二进制）。
+#     .gitignore:103 的注释一直写「不进 git、不进镜像」，但 .dockerignore 里从来没排过
+#     —— 于是每次 COPY . 都把 955MB 的 Windows 二进制打进 Linux 镜像（镜像内实测
+#     /opt/pi-ctf/tools/win = 955MB）。tools/libexec/labenv.sh 只在 MINGW/MSYS/CYGWIN
+#     上把它加进 PATH，容器（Linux）永远用不到；tools/bin/selfcheck:821 的注释也早就
+#     写着「tools/win（.dockerignore 排除），容器内不存在」—— 现在才让这句成真。
+#     work/hosted-agent/audit-hosted.sh:62 的合规检查同样把 tools/win 当「不该出现」。
+tools/win/
+
+# ── 营销物料 / 安装包 ──
+#   2026-11-19：docs/product/（12M 海报 png / 闲鱼文案 / starter 模板）已整目录删除。
+#   规则保留 —— 这类物料最容易在需要时被重新生成又忘了排掉，一旦 COPY . 就会进镜像
+#   （work/hosted-agent/audit-hosted.sh:62 的合规清单同样把 docs/product 当「不该出现」）。
+docs/product/
+**/*.zip
+
+# ── PoC 原文的旧位置（2026-11-18 归并后已空）──
+#   根 pocs/ 原本与 tools/ctfpoc/pocs/ 逐字节重复（10722 文件），归并后只剩一份。
+#   tools/ 是 rw bind mount 进容器的，所以 tools/ctfpoc/pocs/ 本来就不需要烤进镜像；
+#   而根 pocs/ 若还留着，COPY . 会把重复的 75M 再塞一遍（旧镜像内实测
+#   /opt/pi-ctf/pocs=75M + /opt/pi-ctf/tools/ctfpoc=54M 同时存在）。
+pocs/
+
+# ── 文档：README-*.md 是**宿主操作手册**（WSL 安装 / Docker 说明），容器里用不到 ──
+#   注意 README.md 里对它的引用已改成 **GitHub 绝对链接** ——
+#   否则镜像内是死链（相对链接指向一个被 .dockerignore 排除的文件）。
+README-*.md
+# ── 第三方源码（只读参考，177MB；不进镜像）──
+#   ★ 2026-11-11 实测：这里原来**没有**这一条 —— .gitignore 里有 `源码/`，
+#     但 .dockerignore 里没有，所以 COPY . 把 87MB 的 sapper/OpenSecurity 带进了容器
+#     （容器内 /opt/pi-ctf/源码 实测存在）。两者是**两个文件、两套规则**，别记混。
+#   本仓代码对它的引用只出现在注释里（文件:行号 溯源），无运行时读取。
+源码/
+
+# ── uibuild 的暂存区（构建中途残留时不该被 COPY . 带进镜像）──
+.uibuild-staging/
+
+# ── 前端依赖（2026-11-18 加）──
+#   宿主现在没有 node_modules（都在容器里），但只要有人在宿主跑过一次 npm install，
+#   COPY . 就会把**Windows 版**的 node_modules 带进镜像 —— 里面的 esbuild/rollup
+#   原生二进制是 win32 的，镜像内 npm run build 必炸，且报错指向「找不到模块」很难归因。
+#   镜像里 ⑦·3 会自己 npm install，所以这里必须排掉。
+work/ui/web/node_modules/

@@ -1,0 +1,5 @@
+FOUND_FLAG=flag{local-eval-idor-7b2d40}
+
+- 已确认：`/note?id=2` 是私有笔记，但未授权可读，其中逐字返回 `flag: flag{local-eval-idor-7b2d40}`。
+- 已证伪：id=0 和 id≥3 都返回 no such note；首页只显示 alice 的 Note 1。
+- 还差什么：无。

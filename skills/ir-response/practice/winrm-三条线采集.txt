@@ -1,0 +1,34 @@
+# 防御靶场/应急：WinRM 只读采集（每条一行；喂法：winrm session <host> < 本文件）
+# 纪律：
+#   ① 全部只读；先采集再修；每台一份带时间戳输出
+#   ② 先 Test-Path 再扫；-Recurse 必须配 -Depth
+#      实测反例：对【不存在】的 C:\wwwroot 做 -Recurse -File 能挂 45s+（同机别的路径却 1s）
+#      —— 所以"路径看着正常"不能当判据，只能 guard + 限时
+#   ③ 重活（全盘递归 / 大日志导出）不要放这里，见文件末"重活"节，单独跑并配 PI_WINRM_TIMEOUT
+# ── 环境标识 ──
+whoami; hostname; Get-Date -Format o
+Get-CimInstance Win32_OperatingSystem | Select-Object Caption,Version,LastBootUpTime | Format-List
+# ── 线 1：持久化 ──
+Get-ScheduledTask | ? State -ne Disabled | Select TaskPath,TaskName,State,Author
+Get-CimInstance Win32_StartupCommand | Select Name,Command,Location,User
+Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run' -EA SilentlyContinue
+Get-ItemProperty 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run' -EA SilentlyContinue
+Get-Service | ? StartType -ne Disabled | Select Name,DisplayName,Status,StartType
+Get-LocalUser | Select Name,Enabled,LastLogon,PasswordRequired
+Get-LocalGroupMember -Group Administrators
+foreach ($p in @("C:\inetpub","C:\wwwroot","C:\phpstudy_pro\WWW")) { if (Test-Path $p) { Get-ChildItem $p -Recurse -Depth 3 -File -EA SilentlyContinue | ? LastWriteTime -gt (Get-Date).AddDays(-7) | Select FullName,Length,LastWriteTime | Select -First 40 } }
+Get-ChildItem C:\Windows\Temp,$env:TEMP -File -EA SilentlyContinue | ? LastWriteTime -gt (Get-Date).AddDays(-7) | Select FullName,Length,LastWriteTime
+# ── 线 2：外联 ──
+Get-NetTCPConnection -State Established | ? RemoteAddress -notmatch '^(127\.|::1|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)' | Select LocalPort,RemoteAddress,RemotePort,OwningProcess
+Get-Process | ? Path | Select Id,ProcessName,Path,StartTime | Sort StartTime -Desc | Select -First 30
+Get-DnsClientCache | Select Entry,Data,TimeToLive
+Get-NetFirewallRule -EA SilentlyContinue | ? Enabled -eq 'True' | Select -First 40 DisplayName,Direction,Action
+# ── 线 3：时间线与账号 ──
+Get-WinEvent -FilterHashtable @{LogName='Security';Id=4624,4625,4672;StartTime=(Get-Date).AddDays(-3)} -MaxEvents 100 -EA SilentlyContinue | Select TimeCreated,Id,@{n='Msg';e={($_.Message -split "`n")[0]}}
+Get-WinEvent -LogName System -MaxEvents 80 -EA SilentlyContinue | Select TimeCreated,Id,LevelDisplayName,ProviderName
+Get-MpThreatDetection -EA SilentlyContinue | Select InitialDetectionTime,ThreatID,Resources
+# ── Web 侧（webshell/后门线索）──
+foreach ($p in @("C:\inetpub\wwwroot","C:\wwwroot","C:\phpstudy_pro\WWW")) { if (Test-Path $p) { Get-ChildItem $p -Recurse -Depth 3 -File -Include *.php,*.jsp,*.aspx,*.ashx -EA SilentlyContinue | ? LastWriteTime -gt (Get-Date).AddDays(-14) | Select FullName,Length,LastWriteTime | Select -First 40 } }
+# ── 重活（慢）：**不要**放进上面，按需单独跑，务必限时限范围 ──
+# PI_WINRM_TIMEOUT=600 winrm run <host> 'Get-ChildItem C:\inetpub\wwwroot -Recurse -File -EA SilentlyContinue | ? LastWriteTime -gt (Get-Date).AddDays(-30) | Select -First 200 FullName,LastWriteTime'
+# PI_WINRM_TIMEOUT=900 winrm run <host> 'Get-ChildItem C:\ -Recurse -Depth 5 -File -Include *.php,*.jsp -EA SilentlyContinue | Select -First 100 FullName,LastWriteTime'

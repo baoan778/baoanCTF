@@ -1,0 +1,15 @@
+# 人手写入口清单 —— 由 tools/make-bin.sh 生成，别手改。
+# 单一可写点：tools/make-bin.sh 的 HAND_TOOLS。
+py
+pi
+fgs
+selfcheck
+sesscan
+sweep
+handover
+winrm
+tsec
+pwnkit
+f5
+vol
+uibuild

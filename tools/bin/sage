@@ -1,0 +1,28 @@
+#!/bin/bash
+# sage —— 容器/WSL 里的 SageMath 入口（passagemath 实现）
+#
+# 为什么要有这层：apt 的 sagemath 在 Ubuntu 24.04 已下架，装的是 passagemath
+# （纯轮子版）。它的 `sage` 命令落在 tools/venv/bin/sage，而 PATH 里没有 venv/bin，
+# 所以直接敲 sage 找不到 —— selfcheck 也就一直报「没装 sage」。
+#
+# 这条包装把 venv 的 sage 暴露成 PATH 上的 sage，并兼容三种用法：
+#   sage                → 交互式 REPL
+#   sage script.sage    → 跑 sage 脚本（preparser 生效，^ 会变幂运算）
+#   sage -c "..."       → 跑一段 sage 代码
+SELF="$0"; . "$(cd "$(dirname "$0")/../libexec" && pwd)/labenv.sh"
+# ★ 2026-11-07：不能写死 $T/venv/bin/sage。labenv.sh 已经按**平台**选好了解释器
+#   （宿主 Windows → tools/venv-win/Scripts/python.exe；容器/里 Linux → tools/venv/bin/python）。
+#   原来在宿主上仍去找那个 WSL venv 里的 sage，必然报「没装 sage」——
+#   而真相是宿主上**没装**、容器里**装了**。两件事不能用同一路径判。
+VENV_PY="${PI_LAB_PYTHON:-$PY}"
+SAGE_BIN="$(dirname "$VENV_PY")/sage"
+# Windows venv 里可执行文件带 .exe 后缀
+[ -x "$SAGE_BIN" ] || [ -x "$SAGE_BIN.exe" ] && SAGE_BIN="$SAGE_BIN" || true
+[ -x "$SAGE_BIN" ] || SAGE_BIN="$SAGE_BIN.exe"
+[ -x "$SAGE_BIN" ] || {
+  echo "✘ 没装 sage（passagemath）" >&2
+  echo "  容器里：应随镜像构建装上；手工补：$T/venv/bin/pip install -r requirements-extra.txt" >&2
+  echo "  装完再补命名空间：bash docker/sage-shim.sh $T/venv" >&2
+  exit 1
+}
+exec "$SAGE_BIN" "$@"

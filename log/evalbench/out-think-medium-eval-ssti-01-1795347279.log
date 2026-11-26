@@ -1,0 +1,3 @@
+SSTI 直接返回了 flag。
+
+FOUND_FLAG=flag{local-eval-ssti-c58e12}

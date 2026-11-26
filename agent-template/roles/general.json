@@ -1,0 +1,23 @@
+{
+  "name": "日常通用",
+  "kind": "role",
+  "icon": "terminal",
+  "description": "日常开发：读代码、改功能、跑测试，改动最小且可回滚",
+  "tools": null,
+  "capabilities": [
+    "ctf.board",
+    "shell.unix",
+    "filesystem.search",
+    "script.run",
+    "data.json",
+    "env.tools",
+    "ops.session",
+    "archive.extract",
+    "net.download",
+    "media.convert"
+  ],
+  "contextFiles": true,
+  "id": "general",
+  "promptFile": "prompts/general.md",
+  "formatVersion": 1
+}

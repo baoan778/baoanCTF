@@ -1,0 +1,6 @@
+#!/bin/bash
+# TSecBench 跑分平台接入客户端 —— 包装 tools/tsecbench.py（只用标准库）
+#   tsec config|list|start|addr|hint|submit|close|vpn|--selftest
+SELF="$0"; . "$(cd "$(dirname "$0")/../libexec" && pwd)/labenv.sh"
+[ -n "$PY3" ] || lab_die "找不到 python3"
+exec "$PY3" "$T/tsecbench.py" "$@"

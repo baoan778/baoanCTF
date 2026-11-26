@@ -1,0 +1,4 @@
+已通过路径穿越来自 `/tmp/flag.txt` 的 flag。
+
+FOUND_FLAG=flag{local-eval-traversal-4d90ab}
+

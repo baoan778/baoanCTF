@@ -1,0 +1,17 @@
+#!/bin/bash
+# tunnel-proxy —— 最小 HTTP 代理（CONNECT 隧道 + 明文绝对 URI 转发）
+#
+# 为什么有它：容器在 Docker bridge 网络里，看不到宿主 WSL 的 VPN 网段（靶场 10.x）。
+#   A1 `--network host`、A2 静态路由都已被实测证伪（证据见 tools/tunnel-proxy.py 头注释）。
+#   A3 = 宿主起 openvpn + 本代理，容器只把 HTTP 流量指过来（TSEC_PROXY）。
+#
+# 用法（宿主侧，先起 VPN 再起它）：
+#   tunnel-proxy --port 8888 --allow 10.0.100.58 --allow 10.0.0.0/8
+#
+# 容器侧只需：
+#   docker exec -e TSEC_PROXY=http://<宿主IP>:8888 -u ctf pictf tsec healthcheck
+#
+# ⚠ --allow 是白名单，不写就不转发；默认拒绝（403）。别图省事放全网。
+
+T="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+exec "${PYTHON:-python3}" "$T/tunnel-proxy.py" "$@"

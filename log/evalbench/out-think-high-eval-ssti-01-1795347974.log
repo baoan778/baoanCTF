@@ -1,0 +1,3 @@
+FOUND_FLAG=flag{local-eval-ssti-c58e12}
+
+已确认：`GET /hello?name={{config}}` 返回 `<h1>Hello {'FLAG': 'flag{local-eval-ssti-c58e12}'}</h1>`。此前已用 `{{7*7}}` 验证这是 Jinja2 SSTI，服务器返回 49。

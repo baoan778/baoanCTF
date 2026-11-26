@@ -1,0 +1,50 @@
+{
+  "name": "CTF 竞赛",
+  "kind": "role",
+  "icon": "flag",
+  "description": "解题主路线：侦察 → 假设 → 最小复现 → 利用 → flag 逐字核验",
+  "thinkingLevel": "high",
+  "sessionNamePrefix": "[CTF]",
+  "tools": null,
+  "capabilities": [
+    "ctf.board",
+    "ctf.kb",
+    "ctf.poc",
+    "reverse.static",
+    "binary.unpack",
+    "pwn.debug",
+    "crypto.tools",
+    "forensics.disk",
+    "forensics.memory",
+    "forensics.pcap",
+    "stego.image",
+    "web.scan",
+    "web.exploit",
+    "osint.image",
+    "osint.web",
+    "archive.crack"
+  ],
+  "contextFiles": true,
+  "_autoCompactionNote": "★ 2026-11-13：与 work/ui/roles-pack/ctf.json 必须同值（曾一边 true 一边 false，UI 重置角色就会把行为改掉）。取 true 的依据：provision-agent.sh:92 出厂默认 compaction=true；ledger-compact.ts 只在真发生压缩时才有 session_compact/context 钩子可挂；ctf-ops.ts:162 的 90% 守卫只是提醒，不能替代压缩。长题跑到上下文墙就再也救不回来。",
+  "autoCompaction": true,
+  "delegation": {
+    "enabled": true,
+    "mode": "background",
+    "deliverOn": "turn_end",
+    "requireAudit": true,
+    "stopOnFlag": true,
+    "allowedRoles": [
+      "ctf-recon",
+      "ctf-verify",
+      "ctf-route",
+      "ctf-vision",
+      "ctf-wp"
+    ],
+    "maxChildren": 3,
+    "maxParallel": 2,
+    "maxDurationSeconds": 600
+  },
+  "id": "ctf",
+  "promptFile": "prompts/ctf.md",
+  "formatVersion": 1
+}

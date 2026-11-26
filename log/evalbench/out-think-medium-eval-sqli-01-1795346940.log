@@ -1,0 +1,3 @@
+FOUND_FLAG=flag{local-eval-sqli-3f9a1c}
+
+已解决：登录表单存在 SQLi 绕过（`username=admin'--` → 302 + `session=tok-admin-9f21`），带该 cookie 访问 `/dashboard` 直接返回逐字 flag。

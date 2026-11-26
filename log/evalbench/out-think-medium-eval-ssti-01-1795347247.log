@@ -1,0 +1,3 @@
+FOUND_FLAG=flag{local-eval-ssti-c58e12}
+
+已确认：SSTI 在 `/hello?name=`，`{{config}}` 直接回显 FLAG；`{{config.items()}}` 双重确认逐字一致。

@@ -1,0 +1,24 @@
+{
+  "name": "pwn 题模板",
+  "nkey": "pwn",
+  "description": "二进制利用题：先定保护与 libc，再用本地跑通的脚本打远程",
+  "kind": "ctf",
+  "goal_rule": "在题目给的 host:port 上拿到 shell 并读到 flag；写清偏移/泄漏/写原语三段证据",
+  "target": "",
+  "scope": [],
+  "checks": [
+    "checksec / file / strings 先定架构与保护；远程 libc 版本要自己取（别用本机的猜）",
+    "交互脚本先用本地跑通再打远程——同一份脚本只换 host/port",
+    "偏移用 pattern + cyclic 实测，不许抄题解数字",
+    "格式化字符串先定参数位置（%N$p 扫），再定写原语",
+    "堆题先画 chunk 生命周期图（alloc/free/edit/show 的状态机），再谈风水",
+    "泄漏 → 基址 → 写原语：每段留一条命令输出作证据"
+  ],
+  "constraints": [
+    "只打赛题给的目标端口；不扫同网段其他主机",
+    "崩溃后先保存 core/交互日志再重试（别反复盲打烧时间）"
+  ],
+  "source": "builtin",
+  "created_at": "2026-11-17T00:00:02+00:00",
+  "updated_at": "2026-11-17T00:00:02+00:00"
+}

@@ -1,0 +1,32 @@
+# 统一换行：源码用 LF，Windows 批处理保留 CRLF
+* text=auto eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+
+# 二进制（不要被当成文本 diff）
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.tar binary
+*.whl binary
+*.so binary
+*.dll binary
+*.exe binary
+*.pyd binary
+*.vmdk binary
+
+# 字典/大文本：不参与语言统计、不折叠 diff
+tools/knowledge/** linguist-vendored
+tools/knowledge/** -diff
+vendor/** linguist-vendored
+vendor/** -diff
+
+# 生成物：diff 里只显示"已生成"
+tools/bin/** linguist-generated
+board/fgs.py -diff

@@ -1,0 +1,618 @@
+[
+  {
+    "id": "cand-8aa7ea8d",
+    "dedupe": "ecee9bf15aa3",
+    "status": "candidate",
+    "created_at": "2026-09-28T08:52:51+00:00",
+    "project": "broken_ihdr",
+    "signal": "prose",
+    "trigger": "修好损坏的 PNG，取出隐藏的 flag（格式 LHFLAG{...}）",
+    "method": [
+      "`f001` IHDR CRC=0x7cfb886d 与算得 0xfac6ddb3 不符；3 个 IDAT 与 IEND 的 CRC 全部正确 → 只改了 IHDR 字段，存的 0x7cfb886d 是原始正确 CRC",
+      "`f002` 解压 IDAT 得原始像素流长度 L=1277360，约束 h*(1+3w)=L；结合 CRC 反解唯一命中原始尺寸 760x560（文件里被改成 474x379，即裁掉了右侧与下侧）",
+      "`f003` 重建 fixed.png（760x560）后图像可读，底部文本框显示 flag：LHFLAG{IHDR_CRC_3E8C7A9D}"
+    ],
+    "source": {
+      "project": "broken_ihdr",
+      "step": "(整题)",
+      "facts": [
+        "f001",
+        "f002",
+        "f003"
+      ]
+    },
+    "evidence": [
+      "walk.py 逐 chunk 校验，仅 IHDR ✗",
+      "solve.py：L 的因子中 k=1+3w≡1(mod3) 且 CRC==0x7cfb886d，唯一解 w=760 h=560",
+      "tesseract psm=7 单行模式 + 字符白名单，逐字复现"
+    ],
+    "generalize": null,
+    "pitfall": null,
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "id": "cand-fe04c500",
+    "dedupe": "00946abd8ed9",
+    "status": "candidate",
+    "created_at": "2026-09-28T08:52:51+00:00",
+    "project": "refs-gap",
+    "signal": "prose",
+    "trigger": "补 outbox 终态：拒绝条目落 rejected/action_required + 拒绝原因进审计 + attempt 计数 + 重放防护（对应 ADR 0021/0023），改 board/schema.md + board/fgs.py + 回归测试",
+    "method": [
+      "`f009` outbox 投递终态已补齐（ADR 0021/0023 落地）：board/fgs.py 新增 deliveries.jsonl 投递台账与 outbox-rejected.jsonl 归档，四种终态 applied/rejected/action_required/duplicate 全部落台账+审计；重复投递按内容指纹判 duplicate 不二次写图；attempt 计数不重置；新增 fgs outbox 人读视图；board/schema.md 写入契约；board/tests/test_outbox.py 24 条断言全绿。顺带修掉 audit() 里载荷同名键吞掉动作名的 bug。"
+    ],
+    "source": {
+      "project": "refs-gap",
+      "step": "s004",
+      "facts": [
+        "f009"
+      ]
+    },
+    "evidence": [
+      "python3 board/tests/test_outbox.py → 通过 24 / 失败 0；fgs outbox _test_outbox 输出四种终态；log.jsonl op 统计出现 outbox.applied/rejected/duplicate"
+    ],
+    "generalize": null,
+    "pitfall": null,
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "id": "cand-d8599c96",
+    "dedupe": "508788ab237a",
+    "status": "candidate",
+    "created_at": "2026-09-28T08:52:51+00:00",
+    "project": "refs-gap",
+    "signal": "prose",
+    "trigger": "补 leadership：fgs 加 lead 声明/心跳/接管语义，防多窗口双 dispatcher（对应 ADR 0034 的 leader.lock + 首灯身份检查）",
+    "method": [
+      "`f010` 调度者身份（首灯检查）已落地（ADR 0034 → pi-lab 映射）：新增 lead.json 单 epoch 心跳（LEAD_TTL=300s，owner 默认取 PI_SESSION_ID）；fgs next 做首灯身份检查（无主/过期自动接管、别人当值 exit 2 且不派活、--json 给 task=wait）；fgs lead 提供声明/续期/释放/查看，非持有者释放被拒；board/schema.md 新增『调度者身份』一节；skills/fgs-orchestrate 补纪律段；board/tests/test_lead.py 25 条断言全绿。只借 ADR 0034 的心跳+首灯两件事，不搬它的 runtime 协议。"
+    ],
+    "source": {
+      "project": "refs-gap",
+      "step": "s005",
+      "facts": [
+        "f010"
+      ]
+    },
+    "evidence": [
+      "python3 board/tests/test_lead.py → 通过 25 / 失败 0；fgs next refs-gap 输出『👤 接管调度：sess-01a0e70d（原本无人当值）』"
+    ],
+    "generalize": null,
+    "pitfall": null,
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "id": "cand-d91ddc0c",
+    "dedupe": "13995953e074",
+    "status": "candidate",
+    "created_at": "2026-09-28T08:52:51+00:00",
+    "project": "refs-gap",
+    "signal": "prose",
+    "trigger": "落地两份增量：离线方法论/payload 基线（ADR 0037 映射）+ RiftX 攻击面参考并入 src-recon；决定并改进 skills/tools",
+    "method": [
+      "`f008` s006 拆分完成：RiftX 离线基线部分落地为 s008（已 done）；『要不要把攻击面切分粒度搬进 src-recon』的判断留到 s003 做。不新切 36 个 skill —— 遵守做减法原则，只挂索引 + 按攻击面给直达路径。"
+    ],
+    "source": {
+      "project": "refs-gap",
+      "step": "s006",
+      "facts": [
+        "f008"
+      ]
+    },
+    "evidence": [
+      "s008 已 done；s003 仍 open"
+    ],
+    "generalize": null,
+    "pitfall": null,
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "id": "cand-97bdb07a",
+    "dedupe": "fe03566b7201",
+    "status": "candidate",
+    "created_at": "2026-09-28T08:52:51+00:00",
+    "project": "refs-gap",
+    "signal": "prose",
+    "trigger": "P1 落地离线知识基线：RiftX(MIT) references/assets/scripts → tools/knowledge/ + INDEX + TOOLS.md + src-recon 挂索引",
+    "method": [
+      "`f002` 离线知识基线已落地：tools/knowledge/riftx/recommended-skills（36 skill，剔除 zip/swf 后 263 文件 / 4.3M，含 references 68 篇 md、assets 81 个 payload txt、scripts 30 个 py）；tools/knowledge/INDEX.md（171 行，36 条 → 用途 → 对应 pi-lab skill）由 tools/knowledge/build-index.py 生成；tools/TOOLS.md 新增『四·B 离线知识基线』节并补字典条目；skills/src-recon/SKILL.md 新增『第二工具入口』表（按攻击面 → 目录名直查）。来源 MIT，PROVENANCE.md 记许可与搬运范围。"
+    ],
+    "source": {
+      "project": "refs-gap",
+      "step": "s008",
+      "facts": [
+        "f002"
+      ]
+    },
+    "evidence": [
+      "du -sh=4.3M；find -type f=263；INDEX.md 171 行；TOOLS.md 与 src-recon SKILL.md 已改"
+    ],
+    "generalize": null,
+    "pitfall": null,
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "id": "cand-9030e644",
+    "dedupe": "082e43dc9bcf",
+    "status": "candidate",
+    "created_at": "2026-09-28T08:52:51+00:00",
+    "project": "refs-gap",
+    "signal": "prose",
+    "trigger": "P2 从 0 建应急响应能力：skills/ir-response（SKILL + linux/windows 持久化面 + web 日志溯源）",
+    "method": [
+      "`f001` 应急响应能力从 0 到 1：新建 skills/ir-response（SKILL.md 11.5K + 3 篇 references：linux-persistence.md 7.0K / windows-persistence.md 8.2K / web-log-trace.md 7.4K）。骨架=三条线（持久化/外联/时间线）；含易失性抢救顺序、IOC 结构化表、处置四段、EVTX 关键 EventID 表、无 yara/plaso/chainsaw 时的替代路线。技能总数 14 → 15；AGENTS.md 路由表与 docs/状态快照.md §1.2/§0 已同步。"
+    ],
+    "source": {
+      "project": "refs-gap",
+      "step": "s009",
+      "facts": [
+        "f001"
+      ]
+    },
+    "evidence": [
+      "ls -d skills/*/ | wc -l = 15；find skills/ir-response -type f 输出 4 个文件"
+    ],
+    "generalize": null,
+    "pitfall": null,
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "id": "cand-b5115ee1",
+    "dedupe": "50b1999ac70a",
+    "status": "candidate",
+    "created_at": "2026-10-12T05:14:49+00:00",
+    "project": "msgboard",
+    "signal": "prose",
+    "trigger": "弱口令爆破登录：用户名 admin/tom/eve/ops/administrator/root/test/guest × password3000.txt 等常见口令表；判定=响应不含「用户名或密码错误」或出现 302/Location",
+    "method": [
+      "`f001` 阶段1未命中：4用户(admin,tom,eve,ops)×后台密码精简版前800条=3200任务，420s内有效判定2149次(deadline截断约1000任务未跑)，全部含固定失败串「用户名或密码错误」，候选0；5xx噪声51次/异常7次已剔除不计。注：先前 admin/13388888888=HTTP502 系误报(判定式缺陷已修正)。阶段2(administrator,root,guest,test,operator,manager × union前200)启动中。"
+    ],
+    "source": {
+      "project": "msgboard",
+      "step": "s001",
+      "facts": [
+        "f001"
+      ]
+    },
+    "evidence": [
+      "脚本 work/msgboard/brute2.py；统计 work/msgboard/brute_stats_stage1.txt；候选文件 work/msgboard/candidate_*.txt(本阶段无)"
+    ],
+    "generalize": null,
+    "pitfall": null,
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "id": "cand-a6c6b67e",
+    "dedupe": "5b366958b868",
+    "status": "candidate",
+    "created_at": "2026-10-12T05:14:49+00:00",
+    "project": "msgboard",
+    "signal": "prose",
+    "trigger": "目录/文件爆破：fuzzing-files-php.txt(23k) + 备份扩展名(.bak/.zip/.swp/.old/.save/.orig/.txt) 与 .git/.svn 泄露检测，找隐藏端点/源码",
+    "method": [
+      "`f003` 发现(verified): bootstrap.php = 200/0B, 3/3次一致(Set-Cookie: PHPSESSID, Apache/2.4.68; 对照随机.php均404/362) — 真实隐藏PHP端点, 疑似include入口; logout.php = 302 -> /index.php, 2/2次一致。其余全为404/基线: 备份扩展1080组合(29基名x{name,name.php}x19后缀)零命中、无源码泄露; .git/.svn/.hg/.bzr/.env/.DS_Store 均404; /server-status=403/365。受限范围(靶机负载下间歇502, 实测吞吐5req/s): fuzzing-files-php 23290仅覆盖前~1500词(其中938个非404候选已逐条无负载复验)+keyword子集200; dirs-common 20000未全跑(仅curated 90+keyword 300); 备份轮1080全跑且全部502噪声已重试; 首轮t=40 ffuf结果已作废(5xx污染)。证据: work/msgboard/dirfuzz.txt"
+    ],
+    "source": {
+      "project": "msgboard",
+      "step": "s002",
+      "facts": [
+        "f003"
+      ]
+    },
+    "evidence": [
+      "work/msgboard/dirfuzz.txt"
+    ],
+    "generalize": null,
+    "pitfall": null,
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "id": "cand-3fb05ce4",
+    "dedupe": "215cbc45313c",
+    "status": "candidate",
+    "created_at": "2026-10-12T05:14:49+00:00",
+    "project": "msgboard",
+    "signal": "prose",
+    "trigger": "登录注入深挖：sqlmap 跑 POST 表单 + PHP 类型混淆/数组参数/编码绕过/其他参数名(do,op,mode,page)",
+    "method": [
+      "`f005` 登录面技术层深挖全负 + 弱口令全表补齐：①password 字段 14 注入 payload（可括注释/UNION/转义）全部与基线逐字节一致（200 / 2611 chars / 固定「用户名或密码错误」）；②恒真/恒假 5 对（含 SUBSTRING）无长度/状态码差异，无布尔通道；③SLEEP(0/2)/IF(SLEEP)/BENCHMARK 时间盲无延迟（基线 mean 0.083s），无时间通道；④sqlmap 指定命令 180s 上限只跑完 action 参数（启发式判 might not be injectable）即 timeout-124 截断，未及 username/password，无注入结论（sqlmap_1.log + sqlmap_out/）；⑤类型混淆 12 种（240610708/QNKCDZO/aabg7XSs/0e...长串/0/1/0x0/数组等）×4 用户、username 0/00/0e0、null 字节/二次编码/宽字节/全角引号全负；⑥数组参数触发 PHP Warning「Array to string conversion in /var/www/html/index.php line 33/34」（display_errors=On，修正旧事实「数组不报错」）——提供源码层线索但无类型混淆绕过；⑦action 精确小写 login 才触发，Login/register/reset/debug/source 等 30 值 + do/op/mode/page/act/submit 等 10 参数名全无效果，GET ?source/?debug/?show_source 无源码泄露；⑧弱口令全表补齐：本会话 [800:1776]×4 用户 = 3900/3900 有效判定 + ops[0:800] = 800/800 + eve[540:800] = 260/260（补 stage1 用户序截断缺口），候选 0，5xx 噪声剔除；与 stage1 合并 = admin/tom/eve/ops × 后台密码精简版全 1776 条全量覆盖 0 命中（总耗时 666+129+51s，5.9 req/s）。判定式=302 或 200 不含错误串；全部请求均 200+错误串。结论：登录面（注入/盲注/混淆/编码/参数名/全表弱口令）在测试空间内无绕过点；残留=sqlmap 未跑完 username/password 参数与其他 technique、其他用户名（administrator/root 等）仅 union 前 200 覆盖。"
+    ],
+    "source": {
+      "project": "msgboard",
+      "step": "s003",
+      "facts": [
+        "f005"
+      ]
+    },
+    "evidence": [
+      "work/msgboard/login_s003_summary.txt; work/msgboard/login_probe.tsv; work/msgboard/login_payloads.txt; work/msgboard/login_edge_probes.txt; work/msgboard/array_user.html; work/msgboard/sqlmap_1.log; work/msgboard/sqlmap_out/; work/msgboard/brute_s003.log; work/msgboard/brute_s003_ops0.log; work/msgboard/brute_s003_eve.log; work/msgboard/brute_stats_s003.txt"
+    ],
+    "generalize": null,
+    "pitfall": null,
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "id": "cand-659ae8d3",
+    "dedupe": "b0e3aa595cb3",
+    "status": "candidate",
+    "created_at": "2026-10-12T05:14:49+00:00",
+    "project": "msgboard",
+    "signal": "prose",
+    "trigger": "深挖 bootstrap.php（200/0B 隐藏端点，主会话已独立复核 3/3）：参数 fuzz（page/file/include/tpl/mode）、HTTP 方法矩阵、大小写/后缀变形；观察 Set-Cookie 与 session 行为；并查它是否是被 include 的引导脚本（能否通过文件类漏洞读到源码）",
+    "method": [
+      "`f004` 深挖 bootstrap.php 收口：它是全站共享的 include-only 引导脚本（session 启动+工具函数），本身无参数面；最大收获=用非法 PHPSESSID 触发 PHP 报错，实锤 display_errors=On + 绝对路径。 1) 方法矩阵(带/不带cookie)：GET/POST/HEAD/OPTIONS/PUT/DELETE 全 200/0，Content-Type: text/html; charset=UTF-8，无 Set-Cookie（已有会话时）；无 cookie 首访 Set-Cookie: PHPSESSID=...（=session_start，与 index.php 首访一致）；TRACE→405/388。 2) 路径变形：/bootstrap.php/foo、/bootstrap.php/、//bootstrap.php、/./bootstrap.php、/%62ootstrap.php、/bootstrap%2ephp 均 200/0（PATH_INFO+编码规范化命中）；/bootstrap.PHP、/BOOTSTRAP.PHP、/bootstrap.php;/、/bootstrap.php%20、/bootstrap.php%00、/css/bootstrap.php 均 404/362（大小写敏感=Linux）。 3) 参数 fuzz：20 参数名(page,file,include,tpl,mode,action,do,view,load,path,url,cmd,debug,source,lang,name,mod,p,f,s=1)+组合(debug=1,source=1,show=1,mode=debug,action=source,file=index.php,include=index.php,tpl=bootstrap,page=bootstrap,page[]=x,page=1万字符,page=%ff%fe) 全部 200/0，长度/头/耗时无任何差异；1 万字符值→Apache 414(非 PHP 错误)。 4) 请求体与头：空 body、form、JSON、octet-stream、msg=10k 全 200/0；XFF:127.0.0.1、X-Original-URL、X-Rewrite-URL、X-Requested-With、UA=admin-bot、Range 全无差异。 5) 决定性 include 证据：Cookie: PHPSESSID=../../etc/passwd 访问 /index.php、/admin.php、/logout.php、/ 均返回：Warning session_start(): Session ID is too long or contains illegal characters ... in /var/www/html/bootstrap.php on line 4 → 四个入口全部 include bootstrap.php；访问 /admin.php、/logout.php 额外出现 Warning Cannot modify header information - headers already sent ... in /var/www/html/bootstrap.php on line 46 → bootstrap.php 第 46 行调 header()（疑 redirect 辅助函数），仅鉴权跳转路由走到。 6) 副产物：display_errors=On、站点根=/var/www/html/、session.save_path 为空(files (path: )) 已实测；正常访问无任何错误输出。 7) 副产物：POST /index.php action=login&username[]=x 或 password[]=x → Warning Array to string conversion in /var/www/html/index.php on line 33/34（index.php:33=username、34=password 字符串化点），登录仍失败，未见类型混淆绕过。 8) 未发现文件/路径类参数 → php://filter/convert.base64-encode/resource=bootstrap.php 与 ../../etc/passwd 等无注入点可试（bootstrap.php 不读任何请求参数）。 结论：bootstrap.php 本身收口；攻击面转向『display_errors=On 错误 oracle + index.php 登录逻辑(33/34 行)』。"
+    ],
+    "source": {
+      "project": "msgboard",
+      "step": "s004",
+      "facts": [
+        "f004"
+      ]
+    },
+    "evidence": [
+      "work/msgboard/boot_headers.txt, work/msgboard/boot_include.txt, work/msgboard/boot_err2.txt, work/msgboard/boot_raw.txt"
+    ],
+    "generalize": null,
+    "pitfall": null,
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "id": "dead-2e85c19d",
+    "dedupe": "baa0db91345b",
+    "status": "candidate",
+    "kind": "deadend",
+    "created_at": "2026-10-12T05:14:49+00:00",
+    "project": "msgboard",
+    "signal": "prose",
+    "trigger": "阶段1未命中：4用户(admin,tom,eve,ops)×后台密码精简版前800条=3200任务，420s内有效判定2149次(deadline截断约1000任务未跑)，全部含固定失败串「用户名或密码错误」，候选0；5xx噪声51次/异常",
+    "method": [
+      "`f001` 阶段1未命中：4用户(admin,tom,eve,ops)×后台密码精简版前800条=3200任务，420s内有效判定2149次(deadline截断约1000任务未跑)，全部含固定失败串「用户名或密码错误」，候选0；5xx噪声51次/异常7次已剔除不计。注：先前 admin/13388888888=HTTP502 系误报(判定式缺陷已修正)。阶段2(administrator,root,guest,test,operator,manager × union前200)启动中。"
+    ],
+    "source": {
+      "project": "msgboard",
+      "step": "s001",
+      "facts": [
+        "f001"
+      ]
+    },
+    "evidence": [
+      "脚本 work/msgboard/brute2.py；统计 work/msgboard/brute_stats_stage1.txt；候选文件 work/msgboard/candidate_*.txt(本阶段无)"
+    ],
+    "generalize": null,
+    "pitfall": null,
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "id": "dead-a2d55c89",
+    "dedupe": "3fad99459461",
+    "status": "candidate",
+    "kind": "deadend",
+    "created_at": "2026-10-12T05:14:49+00:00",
+    "project": "msgboard",
+    "signal": "prose",
+    "trigger": "s001 阶段2也未命中：6 用户(administrator,root,guest,test,operator,manager)×union 口令前 200 条=1200 任务；152s 内有效判定 549 次全部含固定失败串，5xx 噪",
+    "method": [
+      "`f002` s001 阶段2也未命中：6 用户(administrator,root,guest,test,operator,manager)×union 口令前 200 条=1200 任务；152s 内有效判定 549 次全部含固定失败串，5xx 噪声 6 次已剔除，候选 0。至此弱口令面两阶段覆盖完，结论=该面证伪"
+    ],
+    "source": {
+      "project": "msgboard",
+      "step": "(f002 直投)",
+      "facts": [
+        "f002"
+      ]
+    },
+    "evidence": [
+      "work/msgboard/brute_stats_stage2.txt + brute_result_stage2.json（并发5+抖动+退避，判定式=200且不含错误串/302）"
+    ],
+    "generalize": null,
+    "pitfall": null,
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "id": "dead-8e273b6f",
+    "dedupe": "7637e5724fe0",
+    "status": "candidate",
+    "kind": "deadend",
+    "created_at": "2026-10-12T05:14:49+00:00",
+    "project": "msgboard",
+    "signal": "prose",
+    "trigger": "发现(verified): bootstrap.php = 200/0B, 3/3次一致(Set-Cookie: PHPSESSID, Apache/2.4.68; 对照随机.php均404/362) — 真实隐藏PHP端点, 疑似incl",
+    "method": [
+      "`f003` 发现(verified): bootstrap.php = 200/0B, 3/3次一致(Set-Cookie: PHPSESSID, Apache/2.4.68; 对照随机.php均404/362) — 真实隐藏PHP端点, 疑似include入口; logout.php = 302 -> /index.php, 2/2次一致。其余全为404/基线: 备份扩展1080组合(29基名x{name,name.php}x19后缀)零命中、无源码泄露; .git/.svn/.hg/.bzr/.env/.DS_Store 均404; /server-status=403/365。受限范围(靶机负载下间歇502, 实测吞吐5req/s): fuzzing-files-php 23290仅覆盖前~1500词(其中938个非404候选已逐条无负载复验)+keyword子集200; dirs-common 20000未全跑(仅curated 90+keyword 300); 备份轮1080全跑且全部502噪声已重试; 首轮t=40 ffuf结果已作废(5xx污染)。证据: work/msgboard/dirfuzz.txt"
+    ],
+    "source": {
+      "project": "msgboard",
+      "step": "s002",
+      "facts": [
+        "f003"
+      ]
+    },
+    "evidence": [
+      "work/msgboard/dirfuzz.txt"
+    ],
+    "generalize": null,
+    "pitfall": null,
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "id": "dead-6c0f2039",
+    "dedupe": "5d15a751a0de",
+    "status": "candidate",
+    "kind": "deadend",
+    "created_at": "2026-10-12T05:14:49+00:00",
+    "project": "msgboard",
+    "signal": "prose",
+    "trigger": "深挖 bootstrap.php 收口：它是全站共享的 include-only 引导脚本（session 启动+工具函数），本身无参数面；最大收获=用非法 PHPSESSID 触发 PHP 报错，实锤 display_errors=On ",
+    "method": [
+      "`f004` 深挖 bootstrap.php 收口：它是全站共享的 include-only 引导脚本（session 启动+工具函数），本身无参数面；最大收获=用非法 PHPSESSID 触发 PHP 报错，实锤 display_errors=On + 绝对路径。 1) 方法矩阵(带/不带cookie)：GET/POST/HEAD/OPTIONS/PUT/DELETE 全 200/0，Content-Type: text/html; charset=UTF-8，无 Set-Cookie（已有会话时）；无 cookie 首访 Set-Cookie: PHPSESSID=...（=session_start，与 index.php 首访一致）；TRACE→405/388。 2) 路径变形：/bootstrap.php/foo、/bootstrap.php/、//bootstrap.php、/./bootstrap.php、/%62ootstrap.php、/bootstrap%2ephp 均 200/0（PATH_INFO+编码规范化命中）；/bootstrap.PHP、/BOOTSTRAP.PHP、/bootstrap.php;/、/bootstrap.php%20、/bootstrap.php%00、/css/bootstrap.php 均 404/362（大小写敏感=Linux）。 3) 参数 fuzz：20 参数名(page,file,include,tpl,mode,action,do,view,load,path,url,cmd,debug,source,lang,name,mod,p,f,s=1)+组合(debug=1,source=1,show=1,mode=debug,action=source,file=index.php,include=index.php,tpl=bootstrap,page=bootstrap,page[]=x,page=1万字符,page=%ff%fe) 全部 200/0，长度/头/耗时无任何差异；1 万字符值→Apache 414(非 PHP 错误)。 4) 请求体与头：空 body、form、JSON、octet-stream、msg=10k 全 200/0；XFF:127.0.0.1、X-Original-URL、X-Rewrite-URL、X-Requested-With、UA=admin-bot、Range 全无差异。 5) 决定性 include 证据：Cookie: PHPSESSID=../../etc/passwd 访问 /index.php、/admin.php、/logout.php、/ 均返回：Warning session_start(): Session ID is too long or contains illegal characters ... in /var/www/html/bootstrap.php on line 4 → 四个入口全部 include bootstrap.php；访问 /admin.php、/logout.php 额外出现 Warning Cannot modify header information - headers already sent ... in /var/www/html/bootstrap.php on line 46 → bootstrap.php 第 46 行调 header()（疑 redirect 辅助函数），仅鉴权跳转路由走到。 6) 副产物：display_errors=On、站点根=/var/www/html/、session.save_path 为空(files (path: )) 已实测；正常访问无任何错误输出。 7) 副产物：POST /index.php action=login&username[]=x 或 password[]=x → Warning Array to string conversion in /var/www/html/index.php on line 33/34（index.php:33=username、34=password 字符串化点），登录仍失败，未见类型混淆绕过。 8) 未发现文件/路径类参数 → php://filter/convert.base64-encode/resource=bootstrap.php 与 ../../etc/passwd 等无注入点可试（bootstrap.php 不读任何请求参数）。 结论：bootstrap.php 本身收口；攻击面转向『display_errors=On 错误 oracle + index.php 登录逻辑(33/34 行)』。"
+    ],
+    "source": {
+      "project": "msgboard",
+      "step": "s004",
+      "facts": [
+        "f004"
+      ]
+    },
+    "evidence": [
+      "work/msgboard/boot_headers.txt, work/msgboard/boot_include.txt, work/msgboard/boot_err2.txt, work/msgboard/boot_raw.txt"
+    ],
+    "generalize": null,
+    "pitfall": null,
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "id": "dead-efacfb07",
+    "dedupe": "66529801c887",
+    "status": "candidate",
+    "kind": "deadend",
+    "created_at": "2026-10-12T05:14:49+00:00",
+    "project": "msgboard",
+    "signal": "prose",
+    "trigger": "登录面技术层深挖全负 + 弱口令全表补齐：①password 字段 14 注入 payload（可括注释/UNION/转义）全部与基线逐字节一致（200 / 2611 chars / 固定「用户名或密码错误」）；②恒真/恒假 5 对（含 S",
+    "method": [
+      "`f005` 登录面技术层深挖全负 + 弱口令全表补齐：①password 字段 14 注入 payload（可括注释/UNION/转义）全部与基线逐字节一致（200 / 2611 chars / 固定「用户名或密码错误」）；②恒真/恒假 5 对（含 SUBSTRING）无长度/状态码差异，无布尔通道；③SLEEP(0/2)/IF(SLEEP)/BENCHMARK 时间盲无延迟（基线 mean 0.083s），无时间通道；④sqlmap 指定命令 180s 上限只跑完 action 参数（启发式判 might not be injectable）即 timeout-124 截断，未及 username/password，无注入结论（sqlmap_1.log + sqlmap_out/）；⑤类型混淆 12 种（240610708/QNKCDZO/aabg7XSs/0e...长串/0/1/0x0/数组等）×4 用户、username 0/00/0e0、null 字节/二次编码/宽字节/全角引号全负；⑥数组参数触发 PHP Warning「Array to string conversion in /var/www/html/index.php line 33/34」（display_errors=On，修正旧事实「数组不报错」）——提供源码层线索但无类型混淆绕过；⑦action 精确小写 login 才触发，Login/register/reset/debug/source 等 30 值 + do/op/mode/page/act/submit 等 10 参数名全无效果，GET ?source/?debug/?show_source 无源码泄露；⑧弱口令全表补齐：本会话 [800:1776]×4 用户 = 3900/3900 有效判定 + ops[0:800] = 800/800 + eve[540:800] = 260/260（补 stage1 用户序截断缺口），候选 0，5xx 噪声剔除；与 stage1 合并 = admin/tom/eve/ops × 后台密码精简版全 1776 条全量覆盖 0 命中（总耗时 666+129+51s，5.9 req/s）。判定式=302 或 200 不含错误串；全部请求均 200+错误串。结论：登录面（注入/盲注/混淆/编码/参数名/全表弱口令）在测试空间内无绕过点；残留=sqlmap 未跑完 username/password 参数与其他 technique、其他用户名（administrator/root 等）仅 union 前 200 覆盖。"
+    ],
+    "source": {
+      "project": "msgboard",
+      "step": "s003",
+      "facts": [
+        "f005"
+      ]
+    },
+    "evidence": [
+      "work/msgboard/login_s003_summary.txt; work/msgboard/login_probe.tsv; work/msgboard/login_payloads.txt; work/msgboard/login_edge_probes.txt; work/msgboard/array_user.html; work/msgboard/sqlmap_1.log; work/msgboard/sqlmap_out/; work/msgboard/brute_s003.log; work/msgboard/brute_s003_ops0.log; work/msgboard/brute_s003_eve.log; work/msgboard/brute_stats_s003.txt"
+    ],
+    "generalize": null,
+    "pitfall": null,
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "id": "dead-ed392fc0",
+    "dedupe": "580fe9a88149",
+    "status": "candidate",
+    "kind": "deadend",
+    "created_at": "2026-10-12T05:14:49+00:00",
+    "project": "msgboard",
+    "signal": "prose",
+    "trigger": "登录面全负（本轮补测）：①username 字段 14 种注入 payload（' -- / # / UNION / 转义 / 双引号）全部与基线逐字一致（200 + 固定串「用户名或密码错误」），无注入/枚举通道；②主题化口令 4 用户×",
+    "method": [
+      "`f007` 登录面全负（本轮补测）：①username 字段 14 种注入 payload（' -- / # / UNION / 转义 / 双引号）全部与基线逐字一致（200 + 固定串「用户名或密码错误」），无注入/枚举通道；②主题化口令 4 用户×32（bridge/terminal/维护组主题词）0 命中；③失败登录**不会**写入 session（admin/administrator/root/tom/eve/ops/Admin/ADMIN 失败后 admin.php 仍 302）。"
+    ],
+    "source": {
+      "project": "msgboard",
+      "step": "(f007 直投)",
+      "facts": [
+        "f007"
+      ]
+    },
+    "evidence": [
+      null
+    ],
+    "generalize": null,
+    "pitfall": null,
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "id": "dead-0248da97",
+    "dedupe": "f4a9eac10a38",
+    "status": "merged",
+    "kind": "deadend",
+    "created_at": "2026-10-12T05:14:49+00:00",
+    "project": "msgboard",
+    "signal": "prose",
+    "trigger": "越权/参数面全负：①admin.php 的替代鉴权矩阵（11 种 cookie 名 × 6 种取值 = 66 组合）**禁跳转重测**全部 302（上一轮200是自己跟随了 302 的假阳性）；②admin.php 14 个 query 参",
+    "method": [
+      "`f008` 越权/参数面全负：①admin.php 的替代鉴权矩阵（11 种 cookie 名 × 6 种取值 = 66 组合）**禁跳转重测**全部 302（上一轮200是自己跟随了 302 的假阳性）；②admin.php 14 个 query 参数（admin/role/is_admin/debug/preview/upload/auth/key/level/type/source/show/grant）全 302；③index.php 25 个 GET 参数 + 11 个 POST 参数（search/q/keyword/all/private/draft/export/format=json 等）响应与基线**逐字节相同**；④flag 常见路径 14 个全 404；⑤PATH_INFO/编码变形（/admin.php/、//admin.php、/admin.php%00、;.php、大写）全 302/404 —— 门禁是 session 角色判定，不是 PHP_SELF 白名单。"
+    ],
+    "source": {
+      "project": "msgboard",
+      "step": "(f008 直投)",
+      "facts": [
+        "f008"
+      ]
+    },
+    "evidence": [
+      null
+    ],
+    "generalize": "门禁=session 角色时，替代鉴权（换 cookie 名 / 加 query 参数）必然全 302 —— 判越权必须**禁跟随重定向**（curl 不加 -L），否则 302→登录页 的 200 会被当成「未授权可达」的假阳性。",
+    "pitfall": "已用禁跳转矩阵覆盖 66（cookie×值）+39（query 参数）组合后，不要再换 cookie 名/参数名重试；换攻击面（文件面 / 源码泄露 / 上传）。",
+    "reviewer": "pi-lab",
+    "reviewed_at": "2026-10-12T05:15:26+00:00"
+  },
+  {
+    "id": "dead-de5393b1",
+    "dedupe": "9d6fe031b669",
+    "status": "candidate",
+    "kind": "deadend",
+    "created_at": "2026-10-12T05:14:49+00:00",
+    "project": "msgboard",
+    "signal": "prose",
+    "trigger": "★ 覆盖缺口（已在本轮修复中）：s005 的 admin_brute.py **无 offset/续跑**，每用户 1800s 到点即停 → admin 只判定到 #8282、ops 到 #9395，**尾部永远跑不到**；而 guest ",
+    "method": [
+      "`f010` ★ 覆盖缺口（已在本轮修复中）：s005 的 admin_brute.py **无 offset/续跑**，每用户 1800s 到点即停 → admin 只判定到 #8282、ops 到 #9395，**尾部永远跑不到**；而 guest 口令 guest123 在词表第 7578 行 ⇒ 作者口令集中在该区间。已写 work/msgboard/tail_brute.py（同口径词表 + 302/无失败串判定 + 命中后三连验证 + 存 admin 页面）并在后台续跑 admin[8282:]→ops[9395:]。"
+    ],
+    "source": {
+      "project": "msgboard",
+      "step": "(f010 直投)",
+      "facts": [
+        "f010"
+      ]
+    },
+    "evidence": [
+      null
+    ],
+    "generalize": null,
+    "pitfall": null,
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "id": "dead-e0313aed",
+    "dedupe": "011339d9cd9d",
+    "status": "merged",
+    "kind": "deadend",
+    "created_at": "2026-10-12T05:14:49+00:00",
+    "project": "msgboard",
+    "signal": "prose",
+    "trigger": "本轮全负（可复核）：①username 字段 14 种注入 + 主题化/哈希/复用/递增后缀等 ~4000 组合弱口令（含 admin/ops/eve/administrator/root/operator/manager/maintain",
+    "method": [
+      "`f012` 本轮全负（可复核）：①username 字段 14 种注入 + 主题化/哈希/复用/递增后缀等 ~4000 组合弱口令（含 admin/ops/eve/administrator/root/operator/manager/maintainer/staff/supervisor/internal/bridge/xizi/0xgame 等）全负；②gate 绕过 30+ 技法全负：PATH_INFO/编码/无扩展名/10 种 HTTP 方法/XHR/JSON/Referer/Origin/11 种内网来源头/11 cookie 名×6 值/8 种 vhost 头；③会话注入（PHP session.upload_progress 竞态，含 flash 标记探针）未生效——前置代理缓冲上传体，PHP 收不到分片；④参数面（index.php 25 GET + 11 POST、admin.php 14 query、id 型 action 180 组、分页/offset 27 组、pinyin 字段）均与同会话基线逐字节一致；⑤54 个候选端点『登录态 vs 匿名』零差异；⑥flag 常见路径 14 个全 404；⑦错误 oracle：无 notice/PDO 泄露、数组参数仅触发 index.php:33/34 的字符串插值告警。"
+    ],
+    "source": {
+      "project": "msgboard",
+      "step": "(f012 直投)",
+      "facts": [
+        "f012"
+      ]
+    },
+    "evidence": [
+      null
+    ],
+    "generalize": "几千组合的爆破/注入全负要能被**复核**：判定式固定为「200 且响应含固定失败串」+ 5xx/异常单独剔除不计 + 与同会话基线逐字节比对 —— 这套判定式让「全负」成为可信结论，而不是「没跑完」的托词。",
+    "pitfall": "登录字段注入 + 弱口令大表 + gate 绕过 30+ 技法 + 参数面已被这条覆盖；再在登录面加词表/参数名属于同一条路换细节。换攻击面：文件面 / 会话语义 / 上游组件。",
+    "reviewer": "pi-lab",
+    "reviewed_at": "2026-10-12T05:15:35+00:00"
+  },
+  {
+    "id": "cand-489b7ed8",
+    "dedupe": "79891d852324",
+    "status": "candidate",
+    "created_at": "2026-10-12T05:14:49+00:00",
+    "project": "zip-revenge",
+    "signal": "prose",
+    "trigger": "解出 Zip医生_revenge（misc）：从 s3cr3t.zip 还原出 flag 并逐字确认",
+    "method": [
+      "`f001` 附件结构：353B zip，单文件 locked.pyc（223B），method=store，csize=235（=12B crypt header + 223B），flags bit0=1 真加密",
+      "`f002` 本地头与中央目录逐字段完全一致（flags/crc=0xa278a337/csize=235/usize=223 全相等，csize-usize=12）→ 排除简单伪加密",
+      "`f003` bkcrack 1.8.1 实测门槛=最少 12 字节已知明文（8B 报 'not enough plaintext (9 bytes available, minimum is 12)'，检查字节计 1）",
+      "`f004` ZipCrypto 自实现已自校验（已知密码包能解开/错密码不能）后，1081 个常见口令（含空密码与 0-999）全不中 → 密码非弱口令（可信负结果）",
+      "`f006` 更正：12 字节加密头在文件里是【密文】；拿它直接比 CRC 高位是错的（自测包解密后头第12字节=0xb6=DOS时间高位，走 bit3 约定）→ 之前那条'check byte 非标准'结论作废",
+      "`f007` 我的失误：变体A（-x 0 magic+flags / -x 16 marshal）从头到尾【没跑完过一次】—— 8.8 那次我在 15% 手动 pkill 了，之后只跑变体B。把'没跑完'误当'失败'，白耗 40 分钟",
+      "`f008` 资料核实（bili33.top bkcrack 指南 + ctf-wiki pyc 结构）：pyc 头 16 字节 = magic(4)+BitField(4)+mtime(4)+【源文件大小】(4)，marshal 从偏移16起；且 bkcrack 的已知明文【不必连续】（该文 8+4 字节中间带空洞照样出 keys）",
+      "`f010` 【原版对照，本机留档 work/zipdoctor】原版 Zip医生 = 0xGame{pyc_1s_n0t_s0_s3cur3}（操作者已回执）；附件两文件（pyc+源码locked.py），已知明文16B=f30d0d0a|00000000|mtime(从中央目录0x000a extra的NTFS FILETIME推)|size488(从zip里源码未压缩大小读)；bkcrack 约6分钟出keys",
+      "`f011` revenge 版设计差异：只剩 locked.pyc（无源码）→ mtime 与 source size 两个来源都被抽掉；且 zip 是 Python zipfile 生成（version made by=20、无 extra），非原版的 7-Zip",
+      "`f012` 对照结论：原版攻击 'Z reduction 9 bytes / Attack on 729884 Z / ~6min' 与本机复现量级一致 → 我的 bkcrack 参数用法正确，变量只在已知明文内容"
+    ],
+    "source": {
+      "project": "zip-revenge",
+      "step": "(整题)",
+      "facts": [
+        "f001",
+        "f002",
+        "f003",
+        "f004",
+        "f006",
+        "f007",
+        "f008",
+        "f010",
+        "f011",
+        "f012"
+      ]
+    },
+    "evidence": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "generalize": null,
+    "pitfall": null,
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "id": "dead-5db721e6",
+    "dedupe": "bda244fce125",
+    "status": "merged",
+    "kind": "deadend",
+    "created_at": "2026-10-12T05:14:49+00:00",
+    "project": "zip-revenge",
+    "signal": "prose",
+    "trigger": "本地头与中央目录逐字段完全一致（flags/crc=0xa278a337/csize=235/usize=223 全相等，csize-usize=12）→ 排除简单伪加密",
+    "method": [
+      "`f002` 本地头与中央目录逐字段完全一致（flags/crc=0xa278a337/csize=235/usize=223 全相等，csize-usize=12）→ 排除简单伪加密"
+    ],
+    "source": {
+      "project": "zip-revenge",
+      "step": "(f002 直投)",
+      "facts": [
+        "f002"
+      ]
+    },
+    "evidence": [
+      null
+    ],
+    "generalize": "伪加密的判据是**本地头与中央目录的 flags 不一致**（bit0 / CRC / 压缩后大小）。逐字段完全一致 + csize-usize=固定开销 ⇒ 不是伪加密，这条快速排除。",
+    "pitfall": "比对一致就直接排除，去看真实 Crypto（ZipCrypto 已知明文对 / bkcrack），别再反复重读 zip 头。",
+    "reviewer": "pi-lab",
+    "reviewed_at": "2026-10-12T05:15:26+00:00"
+  },
+  {
+    "id": "dead-ac637109",
+    "dedupe": "7462e72673a0",
+    "status": "candidate",
+    "kind": "deadend",
+    "created_at": "2026-10-12T05:14:49+00:00",
+    "project": "zip-revenge",
+    "signal": "prose",
+    "trigger": "我的失误：变体A（-x 0 magic+flags / -x 16 marshal）从头到尾【没跑完过一次】—— 8.8 那次我在 15% 手动 pkill 了，之后只跑变体B。把'没跑完'误当'失败'，白耗 40 分钟",
+    "method": [
+      "`f007` 我的失误：变体A（-x 0 magic+flags / -x 16 marshal）从头到尾【没跑完过一次】—— 8.8 那次我在 15% 手动 pkill 了，之后只跑变体B。把'没跑完'误当'失败'，白耗 40 分钟"
+    ],
+    "source": {
+      "project": "zip-revenge",
+      "step": "(f007 直投)",
+      "facts": [
+        "f007"
+      ]
+    },
+    "evidence": [
+      null
+    ],
+    "generalize": null,
+    "pitfall": null,
+    "reviewer": null,
+    "reviewed_at": null
+  }
+]

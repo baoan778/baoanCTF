@@ -1,0 +1,23 @@
+{
+  "name": "应急响应",
+  "kind": "role",
+  "icon": "shield",
+  "description": "入侵排查：先固定证据 → 再理时间线 → 最后给结论与处置建议",
+  "thinkingLevel": "high",
+  "tools": null,
+  "capabilities": [
+    "ctf.board",
+    "ops.safety",
+    "filesystem.search",
+    "script.run",
+    "forensics.disk",
+    "forensics.memory",
+    "forensics.pcap",
+    "malware.scan",
+    "archive.extract"
+  ],
+  "contextFiles": true,
+  "id": "ir",
+  "promptFile": "prompts/ir.md",
+  "formatVersion": 1
+}

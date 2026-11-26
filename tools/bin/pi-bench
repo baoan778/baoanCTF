@@ -1,0 +1,5 @@
+#!/bin/bash
+# 扩展成本量测 —— 实现见 tools/pi-bench.py
+SELF="$0"; . "$(cd "$(dirname "$0")/../libexec" && pwd)/labenv.sh"
+[ -x "$PY" ] || lab_die "找不到 python"
+exec "$PY" "$T/pi-bench.py" "$@"
