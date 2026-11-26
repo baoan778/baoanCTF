@@ -60,7 +60,7 @@
 
 ```bash
 bash tools/bin/selfcheck --quick    # 10s，先过这一关
-bash tools/bin/selfcheck            # 3min，152 条回归
+bash tools/bin/selfcheck            # 3min，151 条回归
 python3 tools/testcount.py --check  # 测试数与文档一致
 bash log/adv-audit.sh               # 对抗性自检
 ```

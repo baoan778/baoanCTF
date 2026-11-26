@@ -14,7 +14,7 @@
 
 跑过再勾：
 
-- [ ] `bash tools/bin/selfcheck` 全绿（152 条回归）
+- [ ] `bash tools/bin/selfcheck` 全绿（151 条回归）
 - [ ] `python3 -m ruff check board tools` 通过
 - [ ] `python3 tools/lint_sh.py` 通过
 - [ ] **改了测试数** → `python3 tools/testcount.py --sync`
