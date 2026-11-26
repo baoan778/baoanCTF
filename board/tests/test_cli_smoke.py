@@ -73,7 +73,7 @@ ENV = dict(os.environ,
            PI_LAB_TSEC_CONFIG=str(_TSEC_EMPTY))
 for _k in ("TSEC_TOKEN", "BENCHMARK_TOKEN", "TSEC_BASE_URL", "BENCHMARK_BASE_URL"):
     ENV.pop(_k, None)
-# ★ 2026-11-17（#38）：工具留痕检索要有个**假留痕文件**可读，否则 `fgs trace`
+# ★ 2026-11-17（）：工具留痕检索要有个**假留痕文件**可读，否则 `fgs trace`
 #   只能走「文件不存在 → rc=2」这一条分支，等于没冒烟到主路径。
 TRACEF = TMPDIR / "tool-trace.jsonl"
 TRACEF.write_text(json.dumps({
@@ -115,10 +115,10 @@ def main():
     run("hint", PID, "范围：冒烟")
     run("step-add", PID, "试一下入口 A")
     run("step-add", PID, "试一下入口 B")
-    # #40 ①：终态必须带原因 —— timeout 可续上、refuted 不能（这里只走一遍可逆的那条）
+    # ①：终态必须带原因 —— timeout 可续上、refuted 不能（这里只走一遍可逆的那条）
     run("step-abandon", PID, "s002", "--reason", "timeout", "--why", "冒烟：先放弃再续上")
     run("step-reopen", PID, "s002")
-    # #28：纠偏通道 + 止损（队列 FIFO / 队列视图 / 只杀这一路后可直接续上）
+    # ：纠偏通道 + 止损（队列 FIFO / 队列视图 / 只杀这一路后可直接续上）
     run("steer-send", PID, "s002", "--text", "冒烟：切到入口 C")
     run("steer-drain", PID, "s002", "--by", "smoke")
     run("steer-queue", PID, "--json")

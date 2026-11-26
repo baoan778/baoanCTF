@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""board/tests/test_cap_counts.py — 历史决策 #15：有 cap 的地方必须并列真实总数。
+"""board/tests/test_cap_counts.py — 历史决策 ：有 cap 的地方必须并列真实总数。
 
 为什么：闸门/视图把 8 条剪成 6 条却不报总数时，读的人会把「没显示」当成「没发生」——
 planner 据此判「这一片没东西了」→ 整条方向被判死。restart_brief 早就写对了（「另有 N 条，

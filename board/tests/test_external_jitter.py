@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_external_jitter.py — 历史决策 #21 外部抖动 != 自己失败
+"""test_external_jitter.py — 历史决策 外部抖动 != 自己失败
 
 为什么（2026-11-17）：平台侧瞬时问题（容器名额满 / TSec 连接抖动 / pi 引擎崩溃重试耗尽 /
 引擎不可用）原来都走 Ledger().record(code, False) -> attempts+1、fails+1、total_sec+=耗时。

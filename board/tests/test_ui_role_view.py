@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-'''#33 分角色监督视图 —— 静态回归：分组口径 + 结果维度优先 + 不许退回平铺。'''
+'''分角色监督视图 —— 静态回归：分组口径 + 结果维度优先 + 不许退回平铺。'''
 import io
 import os
 import sys

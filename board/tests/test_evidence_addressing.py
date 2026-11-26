@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_evidence_addressing.py — #6 证据正文按内容寻址（能被读者自己重算）
+"""test_evidence_addressing.py — 证据正文按内容寻址（能被读者自己重算）
 
-为什么（2026-11-17）：#6 之前 verify 只记 16 位幂等键，正文从不落盘。
+为什么（2026-11-17）：之前 verify 只记 16 位幂等键，正文从不落盘。
 「事后改 log 再声称逐字通过」在结构上是可能的 —— 因为没有任何东西可被重算。
 改造后：正文落 evidence/blobs/<前两位>/<sha256>.bin，solved/confirm 前重算。
 
@@ -13,7 +13,7 @@
   D. 篡改 blob（同长度换字节）→ solved / confirm 都拒，且点名「证据正文校验失败」。
   E. 缺 blob → solved 拒，且点名「证据正文缺失」。
   F. doctor：孤儿 blob → ⚠；缺失 blob → ✗ 且 rc=1。
-  G. 旧章（#6 之前盖章、无 evidence_sha）→ solved 仍放行，只提醒补指纹。
+  G. 旧章（之前盖章、无 evidence_sha）→ solved 仍放行，只提醒补指纹。
 """
 import hashlib
 import json

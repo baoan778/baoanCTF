@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_role_tool_boundary.py — #45 工具职责边界靠注册表强制
+"""test_role_tool_boundary.py — 工具职责边界靠注册表强制
 
 为什么（2026-11-17）：子代理**拿到什么工具 = 它能干什么**。靠系统提示自觉说
 「你是只读侦察」是纸防线 —— 真边界是 agent-template/roles/*.json 的 tools 白名单。

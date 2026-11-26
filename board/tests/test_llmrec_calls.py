@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_llmrec_calls.py — #50 LLM 调用级留痕（transcript 层）
+"""test_llmrec_calls.py — LLM 调用级留痕（transcript 层）
 
 为什么（2026-11-17）：ARTEX 用 Recorder 装饰 llm.Provider，让 HTTP transport 捕获**原始 wire 体**，
 且把没有 session 的调用（拦截 judge）单列计费。baoan 没有自有 LLM transport —— 模型调用在外部

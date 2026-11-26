@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_graph_compress.py — #34 图压缩：digest 节点 + covers 边 + 可逆展开
+"""test_graph_compress.py — 图压缩：digest 节点 + covers 边 + 可逆展开
 
 为什么（2026-11-17）：baoan 原先只有「归并候选清单」（fgs snapshot 会列出孤点/低置信事实），
 但**没有任何折叠动作**，也没有还原路径 —— 建议是给人看的，图照旧膨胀，Worker 的快照越来越贵。

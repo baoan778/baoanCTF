@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_ui_model_switch.py — #27 运行中换模型（RPC 切换，不重启、不丢上下文）
+"""test_ui_model_switch.py — 运行中换模型（RPC 切换，不重启、不丢上下文）
 
 为什么值得一条测试：这条链路最容易「看起来能用」而实际把上下文扔掉 —— 如果谁把它改成
 调 /api/start（applyStart 换启动参数会重启 pi），界面上仍然显示「已切到 X」，但当前会话

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""#35 旁路提问（/btw）—— 静态回归：通道边界 + 纪律不许漂。"""
+"""旁路提问（/btw）—— 静态回归：通道边界 + 纪律不许漂。"""
 import io
 import os
 import sys

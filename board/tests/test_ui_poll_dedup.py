@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_ui_poll_dedup.py — 前端四项（#18 贴底 / #22 轮询去重 / #23 截断容错 / #26 发送键位）
+"""test_ui_poll_dedup.py — 前端四项（贴底 / 轮询去重 / 截断容错 / 发送键位）
 
 这四项改的都是「静默的体验缺陷」，坏掉时没有任何报错，只有人觉得别扭：
-  #18 无条件贴底 —— 人手往上翻历史，每来一条流式增量就被拽回底部，等于读不了历史；
-  #22 7 处 setInterval 无条件 setState —— payload 没变也重渲染，展开态/选中行/滚动位置被顶掉；
-  #23 args 被后端截断 -> JSON.parse 必失败 -> 折叠行回落整段 JSON 原文，一行读不完 = 没显示；
-  #26 只判 Ctrl/Cmd+Enter、不判 isComposing —— 中文输入法组字时回车是选词，会把半截指令发出去。
+  无条件贴底 —— 人手往上翻历史，每来一条流式增量就被拽回底部，等于读不了历史；
+  7 处 setInterval 无条件 setState —— payload 没变也重渲染，展开态/选中行/滚动位置被顶掉；
+  args 被后端截断 -> JSON.parse 必失败 -> 折叠行回落整段 JSON 原文，一行读不完 = 没显示；
+  只判 Ctrl/Cmd+Enter、不判 isComposing —— 中文输入法组字时回车是选词，会把半截指令发出去。
 
 行为层（salvage 的正则/反转义、shouldSubmitOnKey 的五条判定顺序、sigOf 的签名与循环引用）
 已在 2026-11-17 用容器内 node --experimental-strip-types 直接 import 源码逐条跑过（PROBE_OK /
@@ -108,7 +108,7 @@ def main():
     i_shift = body.find("shiftKey")
     ck("C6 组字判定在换行判定之前", 0 <= i_comp < i_shift, f"{i_comp} vs {i_shift}")
 
-    # ── D：ChatPage（#18 贴底 + #26 发送）────────────────────────────
+    # ── D：ChatPage（贴底 + 发送）────────────────────────────
     chat = text("pages/ChatPage.tsx")
     clines = chat.splitlines()
     ck("D1 有贴底状态 ref", "atBottomRef" in chat)
@@ -121,7 +121,7 @@ def main():
     ck("D7 自己发消息后强制贴底（发完必跟）", chat.count("atBottomRef.current = true") >= 1)
     ck("D8 滚动时实时重算贴底", "atBottomRef.current = el.scrollTop + el.clientHeight" in chat)
 
-    # ── E：ToolCard（#23 截断容错）───────────────────────────────────
+    # ── E：ToolCard（截断容错）───────────────────────────────────
     tc = text("components/ToolCard.tsx")
     ck("E1 抠 command 的正则", 'const CMD_RE = /"command"' in tc)
     ck("E2 单趟反转义", "function unescapeJson" in tc)

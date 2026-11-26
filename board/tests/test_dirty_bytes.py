@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_dirty_bytes.py — #9 脏字节不许丢掉整轮记录
+"""test_dirty_bytes.py — 脏字节不许丢掉整轮记录
 
 血账（2026-11-17）：把 b"flag{abc\xff\xfe_def}" 喂进 fact 正文 →
   rc=1，cmd_fact_add → save() → json.dumps(..., ensure_ascii=False) →

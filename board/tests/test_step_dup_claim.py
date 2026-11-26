@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_step_dup_claim.py — #44 同目标只跑一个（claim 前扫入口指纹）
+"""test_step_dup_claim.py — 同目标只跑一个（claim 前扫入口指纹）
 
 为什么（2026-11-17）：ARTEX 用部分唯一索引（db/schema.sql:1127-1129）保证「同一目标同时只有
 一个复测」；baoan 原先只拦「同一个 step 被别人 claim」，两个**不同** step 做同一件事完全放行，

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_task_templates.py — #46 任务模板化（题型 preset）
+"""test_task_templates.py — 任务模板化（题型 preset）
 
 为什么（2026-11-17）：同题型反复起题，每次都在重写「目标怎么算写清楚 / 这题型必查
 哪些点 / 哪些约束不能忘」。漏一条必查点 = 漏一个攻击面；漏一条约束 = 越权风险。

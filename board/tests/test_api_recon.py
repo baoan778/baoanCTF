@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_api_recon.py — #30 前端接口侦察（api-recon 简化借鉴）
+"""test_api_recon.py — 前端接口侦察（api-recon 简化借鉴）
 
 为什么（2026-11-17）：web 题的接口面就在前端 asset 里，但人工翻几百 KB 的 bundle
 既慢又常漏（拼接字符串、模板字面量、axios 方法藏在配置里）。ARTEX 用一套

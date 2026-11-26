@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_knob_zero.py — #19 哑旋钮：设 0 必须真的生效（不是「等于没设」）
+"""test_knob_zero.py — 哑旋钮：设 0 必须真的生效（不是「等于没设」）
 
 为什么（2026-11-17）：int(os.environ.get("X") or 默认) 把「设 0」与「没设」当成同一件事。
 PI_FGS_BUDGET_WARN=0 本意是关掉快照告警，旧写法下阈值仍是 16000 —— 假的关闭开关。

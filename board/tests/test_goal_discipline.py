@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_goal_discipline.py — #29 目标与约束的书写规范（软提醒，不拒收）
+"""test_goal_discipline.py — 目标与约束的书写规范（软提醒，不拒收）
 
 为什么（2026-11-17）：目标是一张板子的**验收判据**。写「尽量解出来」时，
 fgs next / fgs solved / 子代理任务书全都挂在这句含糊话上 —— 它收不了尾，

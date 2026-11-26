@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_negative_claim.py — #7 否定结论的证据门槛
+"""test_negative_claim.py — 否定结论的证据门槛
 
 问题（2026-11-17 落地）：CTF 里「不可注入 / 端口关闭 / 无登录入口」这类否定结论会让
 规划者**放弃整条方向**。一条轻率的否定 = 一条真路被永久封死，而且任务越早错越难自愈

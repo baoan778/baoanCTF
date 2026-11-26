@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_retest_state.py — #31 复测状态机（reproduced / fixed / inconclusive）
+"""test_retest_state.py — 复测状态机（reproduced / fixed / inconclusive）
 
 为什么（2026-11-17）：复测结论混成一种时，「靶场已经修好」会被读成「平台判错」，
 于是拿同一个值无限重投 —— 纯烧时间。清单要求：只取三种结论、**只有 fixed 自动改状态**、

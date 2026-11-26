@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_local_deny_tag.py — #5 拦截消息必须自报「本机管控·非靶机防御」
+"""test_local_deny_tag.py — 拦截消息必须自报「本机管控·非靶机防御」
 
 为什么（2026-11-17）：CTF 里有三个「本机在拒」的入口 —— lane_gate 拒 /
 DSH 沙箱拒 / fgs gate 退 3。不标清楚就会被读成「靶机有 WAF/防护」→

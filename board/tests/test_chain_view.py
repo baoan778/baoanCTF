@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_chain_view.py — #11 利用链视图（跨唤醒只认一张表）
+"""test_chain_view.py — 利用链视图（跨唤醒只认一张表）
 
 为什么（2026-11-17）：多步利用链（拿 session → 打内网 → 上传 → RCE）跨唤醒会重头跑。
 ARTEX 把 Todos 存在 session 之外（actool.NewTodoStore 经 opts.Todos 注入，planner 每轮 List()），

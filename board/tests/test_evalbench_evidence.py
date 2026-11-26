@@ -4,7 +4,7 @@
 
 为什么
 ------
-README #14 声称「A/B 三轮（n=24/臂）」，但本工作区与容器里 log/evalbench/ 与
+README 声称「A/B 三轮（n=24/臂）」，但本工作区与容器里 log/evalbench/ 与
 work/evalsolve/ 都不存在 —— 结论无法复核。根因不是"没写落盘语句"，而是：
   ① 结果落在会被清理的 log/ 下；
   ② 没有 summary、没有索引、没有对比工具。

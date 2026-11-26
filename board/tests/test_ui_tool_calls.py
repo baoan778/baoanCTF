@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""#43 调用次数与未命中清单 —— 静态回归（会话 JSONL 聚合 → /api/tools、/api/skills → 三处界面）。
+"""调用次数与未命中清单 —— 静态回归（会话 JSONL 聚合 → /api/tools、/api/skills → 三处界面）。
 
 为什么是静态断言：聚合函数的运行时行为已用 node 夹具探针验过（同一次调用同时有 toolCall 块与
 toolResult 两条只算一次、没有会话文件回空表不抛、超上限标 truncated）；这里守的是接线不漂 ——

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# #1/#2/#3 提示词纪律的回归：子代理「单意图 + 写回」、planner 七条硬规则、身份与不变量进系统提示。
+# //提示词纪律的回归：子代理「单意图 + 写回」、planner 七条硬规则、身份与不变量进系统提示。
 # 这三条都是**提示词层**约束，最容易在改文案时被悄悄删掉：删了不会报错，
 # 只会让子代理重新开始发散、让编排者重新开始原地打转。所以源码级断言是唯一的护栏。
 import importlib.util
@@ -44,7 +44,7 @@ src = io.open(os.path.join(ROOT, 'tools', 'sdkshard.py'), encoding='utf-8').read
 fgs = io.open(os.path.join(ROOT, 'board', 'fgs.py'), encoding='utf-8').read()
 doc = io.open(os.path.join(ROOT, 'docs', '并行工作.md'), encoding='utf-8').read()
 
-# A #3：身份与不变量在系统提示里，题面留在 user 首条
+# A ：身份与不变量在系统提示里，题面留在 user 首条
 S = getattr(sd, 'SOLVER_SYSTEM', '')
 has('A1 有 SOLVER_SYSTEM', str(bool(S)), 'True')
 has('A2 标题是「不变量」', S, '## 不变量')
@@ -72,13 +72,13 @@ eq('A18 文件内容就是 SOLVER_SYSTEM', io.open(sp, encoding='utf-8').read(),
 sp2 = sd.write_solver_system(tmp)
 eq('A19 重复调用幂等（同一路径）', str(sp2), str(sp))
 
-# B #1：硬条款 0e 单意图
+# B ：硬条款 0e 单意图
 has('B1 TASK_CLAUSES 有 0e 单意图', fgs, '0e.【单意图】')
 has('B2 探了不写回 = 没做', fgs, '探了不写回 = 没做')
 has('B3 不要自己再派活', fgs, '不要自己再派活')
 has('B4 指向 fact-add 写回', fgs, 'fgs fact-add` 写回')
 
-# C #2：planner 七条硬规则表 + 诚实边界
+# C ：planner 七条硬规则表 + 诚实边界
 has('C1 有 4.6e 节', doc, '### 4.6e planner 七条硬规则')
 for mark in ['①', '②', '③', '④', '⑤', '⑥', '⑦']:
     has('C2 规则行 ' + mark, doc, '| ' + mark + ' |')

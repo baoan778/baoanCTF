@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_transcript_cost.py — #49 逐 Step 成本（transcript token 四分类计价）
+"""test_transcript_cost.py — 逐 Step 成本（transcript token 四分类计价）
 
 为什么（2026-11-17）：成本画像原先只有「全项目合计」的 token/cost，判「这题值不值得继续」
 时看不出**哪一路烧了钱没产出**。ARTEX 把每步的 input/output/cache_read/cache_write_tokens

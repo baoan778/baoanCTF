@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_constraints_at_creation.py — #51 约束落在创建路径上，不在提示词里
+"""test_constraints_at_creation.py — 约束落在创建路径上，不在提示词里
 
 为什么（2026-11-17）：模型在压力下第一批跳过的就是「请记得」。ARTEX 把血缘校验放在
 addOneIntent 写入路径（parent_id 必须是已存在的 fact/finding），把「宣布整体完成」这类
@@ -9,7 +9,7 @@ addOneIntent 写入路径（parent_id 必须是已存在的 fact/finding），�
 
 判据（跑出来的行为）：
   A. 血缘在写入那一刻被校验：挂到错误类型节点 / 不存在的节点 → 非 0 退出。
-  B. verified 但没给 --from → 软提醒（#51）+ 审计 fact.verified-no-source，仍写入。
+  B. verified 但没给 --from → 软提醒（）+ 审计 fact.verified-no-source，仍写入。
   C. 给了 --from 的 verified 不产生该审计；非 verified 也不产生。
   D. 「放弃必须写 WHY」仍是硬拒（--why 空串）。
   E. 交卷只能由主会话做：solved-orphan 门禁仍在（孤点 Fact 挡在交卷前）。

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_quota_strict.py — 历史决策 #48 额度错误「极严格判定」
+"""test_quota_strict.py — 历史决策 额度错误「极严格判定」
 
 为什么（2026-11-17）：熔断器误判比不熔断更贵——把一次 429 限流当成余额耗尽，整场就停了；
 反过来，题面正文里出现「Insufficient Balance」「402」这类字样（记账题、支付类题很常见）

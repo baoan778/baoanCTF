@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_lane_isolation.py — #47 会话隔离工作目录 + 工具大输出落盘
+"""test_lane_isolation.py — 会话隔离工作目录 + 工具大输出落盘
 
 为什么（2026-11-17）：多路并行时所有 pi 的 cwd 都是仓库根（有实测理由，见 sdkshard.py），
 于是「写文件」是最后一个没有隔离面的动作 —— 两路同写 /tmp/exp.py 或仓库根同名文件，

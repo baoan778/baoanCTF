@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_autostart_loop.py — R6-P0-1 守护进程的守护（心跳循环）
+"""test_autostart_loop.py — 守护进程的守护（心跳循环）
 
 为什么
 ------
-实测（历史复盘 R5-01 §3.1b）：log/supervisor.log 在 14:13:20 → 16:11:47 之间
+实测（§3.1b）：log/supervisor.log 在 14:13:20 → 16:11:47 之间
 **118.5 分钟零 tick**（tick=30s）—— 守护自己死了，而 entrypoint 只在容器启动时
 调**一次** solver-autostart.sh。孤儿 shard 跑完后无人重启，于是出现 27.1 分钟全场零活动。
 

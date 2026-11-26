@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_trace_search.py — #38 工具留痕三档检索（摘要流 / 关键字命中 / 定 id 取全文）
+"""test_trace_search.py — 工具留痕三档检索（摘要流 / 关键字命中 / 定 id 取全文）
 
 为什么（2026-11-17）：会话被压缩后「当时那条命令的原始输出长什么样」就没了。
 tools/tracewatch.mjs 把输出裁好写进 log/tool-trace.jsonl 之后，**却没有任何检索入口**：

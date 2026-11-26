@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_relate_idempotent.py — #10 连边幂等：同一条边写两次不连坐整批
+"""test_relate_idempotent.py — 连边幂等：同一条边写两次不连坐整批
 
 血账（2026-11-17）：relate 第二次命中「已存在」直接 Fail(...,2) → rc=2。
 在 apply / 三路并行场景下 rc=2 会**连坐整批**（board/schema.md:304 整批拒绝、

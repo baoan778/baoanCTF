@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_fail_next_step.py — #24 「不是 step」类报错必须带下一步
+"""test_fail_next_step.py — 「不是 step」类报错必须带下一步
 
 为什么（2026-11-17）：worker 把 fact/goal 的 id 当 step 传、或抄错一位时，
 旧文案只有一句「X 不是 step」：agent 无从下手，于是整轮卡在同一句报错上重试。
@@ -11,7 +11,7 @@
   B. 板上还没有 step，传一个存在的 goal id → 文案含「还没有 step」+「fgs step-add」。
   C. 传一个不存在的 id → 仍由 node() 报「不存在」，不被静默吞掉（rc=2，node() 的约定码）。
   D. 正常的 step-claim 不受影响（rc=0）。
-  E. #25 的接线在（ModelsPage 渲染 ms/next/health、server 记健康）：静态兜底。
+  E. 的接线在（ModelsPage 渲染 ms/next/health、server 记健康）：静态兜底。
 """
 import os
 import subprocess

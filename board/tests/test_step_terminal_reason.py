@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_step_terminal_reason.py — #40 ① 终态按原因分流（证伪 ≠ 超时）
+"""test_step_terminal_reason.py — ① 终态按原因分流（证伪 ≠ 超时）
 
 为什么（2026-11-17）：`abandoned` 一个状态混装两件事 ——「这条真路走不通」(refuted) 与
 「这次没跑完」(timeout)。而 AGENTS.md §六 纪律 3 说「图上写了试过不行的就换攻击面」，
@@ -184,7 +184,7 @@ def main():
     fgs(lab2, "step-add", "p2", "老数据那一步", "--target", "lab.test")
     gp = Path(lab2) / "p2" / "graph.json"
     g2 = json.loads(gp.read_text(encoding="utf-8"))
-    g2["nodes"]["s001"]["status"] = "abandoned"      # 模拟 #40 之前的落盘：没有 abandon_reason
+    g2["nodes"]["s001"]["status"] = "abandoned"      # 模拟 之前的落盘：没有 abandon_reason
     gp.write_text(json.dumps(g2, ensure_ascii=False, indent=2), encoding="utf-8")
     rc, out = fgs(lab2, "step-reopen", "p2", "s001")
     ck("H1 老数据当 refuted（需 force）", rc == 2 and "证伪" in out, out[:300])

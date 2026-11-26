@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_steer_kill.py — #28 steer 纠偏通道 + kill 止损拒写
+"""test_steer_kill.py — steer 纠偏通道 + kill 止损拒写
 
 为什么（2026-11-17）：baoan 过去只有 fgs steer —— 它**生成一份转向简报**，人还得手工
 steer_subagent 发过去，图里只数 step.steer 审计。三路并行时一路走偏只能杀掉重派，

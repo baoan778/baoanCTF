@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_solve_wrapup.py — #8 超时收尾时序 + #16 收尾词/工具白名单
+"""test_solve_wrapup.py — 超时收尾时序 + 收尾词/工具白名单
 
 为什么（2026-11-17）：sdkshard 原来的超时路径是「rc=124 → killpg → 继续下一题」，
 被杀的 pi 那一轮想法全丢（实测 rc=124 占已跑题约 17%）。现在先杀进程组、再续同一会话跑
