@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_supervisor_heartbeat.py — R12 缺陷 49：守护死了要有人管
+"""test_supervisor_heartbeat.py — 该轮 该缺陷：守护死了要有人管
 
-事故（R5-01 3.1b）：supervisor.log 14:13:20 后 **118.5 分钟零 tick**，
+事故（某轮复盘 3.1b）：supervisor.log 14:13:20 后 **118.5 分钟零 tick**，
 全场 **27.1 分钟零活动**，靠人肉重启。根因不是 supervise 逻辑错，
 而是**没有任何东西检查 supervise 自己还活着**。
 

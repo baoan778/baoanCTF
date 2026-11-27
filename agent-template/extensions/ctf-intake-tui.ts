@@ -6,7 +6,7 @@
  * 填完直接变成 agent 的任务」，不离开终端。
  *
  * 字段：题名 / 类型 / 靶场 / flag格式 / 附件路径 / 题目内容
- * （2026-10-10 操作者要求：① 去掉「平台/比赛」；② 「题面 + 备注」合并为一个「题目内容」）
+ * （2026-10-10 用户要求：① 去掉「平台/比赛」；② 「题面 + 备注」合并为一个「题目内容」）
  *
  * 用法（二选一）：
  *   · 快捷键  F2（或 Ctrl+Shift+T）           ← 随时弹表单
@@ -112,7 +112,7 @@ export function buildMessage(card) {
   L.push(`类型: ${card.kind || "unknown"}`);
   if (card.platform) L.push(`平台/比赛: ${card.platform}`);
   if (card.target) L.push(`靶场/目标: ${card.target}`);
-  // 操作者 2026-10-10：flag 格式不填 = 让我自己去找（而不是这条信息直接消失）
+  // 用户 2026-10-10：flag 格式不填 = 让我自己去找（而不是这条信息直接消失）
   L.push(`flag 格式: ${card.flagfmt || "(未填 —— 自己从题面/平台/输出里推断，拿到后逐字确认)"}`);
   L.push(atts.length ? `附件(已落地):\n${atts.map((a) => "  - " + a).join("\n")}` : "附件: (无)");
   if (card.pid) L.push(`建议 pid: ${card.pid}`);
@@ -157,7 +157,7 @@ export function writeCard(card) {
 // 终端（Windows Terminal / 多数模拟器）把「粘贴」当成一段输入送给程序：
 //     ESC[200~ 正文 ESC[201~
 // 而 onKey 末尾那条规则是「只有可见字符才插入」→ 整段以 \x1b 开头的内容
-// 会被**默默丢掉**（操作者 2026-10-10 实测：“连文字都粘贴不进去”）。
+// 会被**默默丢掉**（用户 2026-10-10 实测：“连文字都粘贴不进去”）。
 // 这里把可能分片送达的序列收全，再交给 fillFromText 落进当前栏。
 const PASTE_START = "\x1b[200~";
 const PASTE_END = "\x1b[201~";
@@ -489,5 +489,5 @@ export default function ctfIntakeTui(pi) {
     });
   } catch { /* 键位冲突：忽略 */ }
 
-  // 不挂常驻状态栏（操作者 2026-10-10：那条提示没用）——表单走 F2 / /intake
+  // 不挂常驻状态栏（用户 2026-10-10：那条提示没用）——表单走 F2 / /intake
 }

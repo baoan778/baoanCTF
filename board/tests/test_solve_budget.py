@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """test_solve_budget.py — R3-A 进展感知预算（有进展才加时）
 
-为什么（2026-11-20 实测 138 run 回放）
+为什么（2026-11-20 实测 历史会话 回放）
 -------------------------------------
 旧策略：第 N 次尝试预算 = base × 1.5^min(N,3)（medium base 300 → 675 / 640）。
 可 27 个超时轮**全部零候选零事实**，它们只是「再来一遍同样会超时」，
@@ -15,7 +15,7 @@
   A. budget_for 的新旧两种口径（lvl=None 必须与旧公式逐值相等 —— 三个调用方靠它）
   B. Ledger.note_round / level / rounds 的档位机（首轮 → 1；有进展 +1；无进展回 0）
   C. 接线：parallel_solver 只在有轮次记录时传 lvl；sdkshard 收尾按三判据记账
-  D. 文档/回滚不漂移（README 与 R3-02 里没有留下会误导的旧口径）
+  D. 文档/回滚不漂移（README 与 某轮复盘 里没有留下会误导的旧口径）
 """
 from __future__ import annotations
 
@@ -72,7 +72,7 @@ def main():
     # A1–A5：lvl=None 必须与旧公式逐值相等（bench/live.py、bench/todo.py 靠它）
     ck("A1 lvl=None 首轮 = base", bf("medium", 0) == 300, bf("medium", 0))
     ck("A2 lvl=None 第2轮 = 450（旧口径）", bf("medium", 1) == 450, bf("medium", 1))
-    # ★ 口径订正（R3-04 记录）：R3-02 的验收判据写成「medium,2 == 675」是笔误 ——
+    # ★ 口径订正（某轮复盘 记录）：某轮复盘 的验收判据写成「medium,2 == 675」是笔误 ——
     #   旧公式也带 cap（medium 封顶 640），所以 300×1.5² = 675 被截成 640。
     #   这里按**真实旧值**断言，否则测试会把一个从未存在过的行为当成基线。
     ck("A3 lvl=None 第3轮 = 640（旧口径，含 cap）", bf("medium", 2) == 640, bf("medium", 2))
@@ -90,13 +90,13 @@ def main():
     ck("A12 首轮（tries=0）即便给了 lvl 也不加时", bf("medium", 0, 3) == 300, bf("medium", 0, 3))
     ck("A13 未知难度退回默认 150", bf("weird", 0, 0) == 150, bf("weird", 0, 0))
     ck("A14 负数 lvl 当 0 处理", bf("medium", 2, -3) == 300, bf("medium", 2, -3))
-    # A15：旧行为完全不变的关键回归 —— 138 run 回放靠这条不让 bench 漂移
+    # A15：旧行为完全不变的关键回归 —— 历史会话 回放靠这条不让 bench 漂移
     same = all(
         bf(d, t) == bf(d, t, None) for d in ("easy", "medium", "hard", "weird")
         for t in range(0, 6)
     )
     ck("A15 lvl 缺省与显式 None 完全一致", same)
-    # A16–A19：回放里最关键的四个真值（就是 R3-02 §7 的验收判据）
+    # A16–A19：回放里最关键的四个真值（就是 某轮复盘 §7 的验收判据）
     ck("A16 medium tries=0 lvl=0 = 300", bf("medium", 0, 0) == 300)
     ck("A17 medium tries=1 lvl=1 = 450", bf("medium", 1, 1) == 450)
     ck("A18 medium tries=2 lvl=0 = 300（旧公式给 640）", bf("medium", 2, 0) == 300)
@@ -176,7 +176,7 @@ def main():
     ck("E8 retry_cap 边界：tries=2 None / tries=3 180",
        policy.retry_cap(2) is None and policy.retry_cap(3) == 180)
 
-    print("D4) 连续 N 轮零资产早停（2026-11-23 操作者拍板）")
+    print("D4) 连续 N 轮零资产早停（2026-11-23 用户拍板）")
     # 事故/依据：k>=4 的 6 个轮全部零产出却各拿 596~929s（合计 4400s）；
     # 而 k>=4 唯一命中（056 k=5，出旗）那一轮是**有资产**的，不在这条判据射程内。
     import os as _os
@@ -234,8 +234,7 @@ def main():
     ck("D4-12 早停后的 todo 过滤仍在", "todo = [c for c in todo if c not in {d[0] for d in _dropped}]" in src_ps)
     ck("D4-13 可用环境变量关掉（A/B）", "PI_SOLVE_ZERO_STREAK" in (ROOT / "tools" / "solve_policy.py").read_text(encoding="utf-8"))
 
-    # ★ 2026-11-26：原 D) 段检查 历史复盘 README 的 R3 行 ——
-    #   那份复盘不再随仓库分发（开源交付只留产品，不留开发过程记录），断言已无意义，删除。
+    # 原 D) 段断言的是内部复盘的某一节；那份复盘不随仓库分发，断言已无意义，删除。
 
     print(f"\n{'OK' if _failed == 0 else 'FAIL'}  {_passed} passed, {_failed} failed")
     return 1 if _failed else 0

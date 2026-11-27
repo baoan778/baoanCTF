@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""回归测试：P2-2 兄弟图 / 同前缀识别（2026-11-03，用户 Q16=A）
+"""回归测试：该轮修复 兄弟图 / 同前缀识别（2026-11-03，用户 既定决策）
 
 跑法：
     python3 board/tests/test_sibling_graph.py
@@ -111,7 +111,7 @@ def main() -> int:
               f"target={ga.get('target')!r}")
 
         # 幂等：同值再写不刷 revision —— 但**只测 target 这一层**。
-        # `kickoff --goal` 每次都会 bump goal.version（既有行为，不归 P2-2 管），
+        # `kickoff --goal` 每次都会 bump goal.version（既有行为，不归 该轮修复 管），
         # 所以直接调 `_set_target` 验证幂等，别把两件事混在一个断言里。
         rev1 = m.load("pa").get("revision")
         m._set_target("pa", "http://t.example.com/app1/a.php")
@@ -198,7 +198,7 @@ def main() -> int:
     if failed:
         print("失败项：" + "、".join(failed))
         return 1
-    print("✓ 兄弟图 / 同前缀识别（P2-2，Q16=A）：全部通过")
+    print("✓ 兄弟图 / 同前缀识别：全部通过")
     return 0
 
 

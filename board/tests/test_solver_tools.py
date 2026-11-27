@@ -4,7 +4,7 @@
 
 为什么
 ------
-1. 138 run 的 2350 次工具调用里，edit / triage 各 0 次，但它们的 schema
+1. 历史会话 的 2350 次工具调用里，edit / triage 各 0 次，但它们的 schema
    每轮随 system prompt 重发（约 5.9M 承载字符 / 277.8M = 2%）→ 应加进 --exclude-tools。
 2. 实测缺 sshpass（1 次 command not found）、php/mysql/sqlite3/redis-cli/tcpdump
    全缺 → PHP 反序列化/DB 题只能手拼，白花时间。已补进镜像与 requirements。

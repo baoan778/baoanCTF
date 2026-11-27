@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P1-1 / P1-4 / P1-3 回归：平台回执自动闭环 + 多旗剩余 + 槽位账。
+"""该轮修复 / 该轮修复 / 该轮修复 回归：平台回执自动闭环 + 多旗剩余 + 槽位账。
 
     python3 board/tests/test_flag_auto.py
 
@@ -189,7 +189,7 @@ def main():
         print("失败项：" + "；".join(failed))
         return 1
     print(f"通过 {len(passed)} / 失败 0")
-    print("✓ P1-1/P1-3/P1-4（平台闭环 + 剩余旗 + 槽位账）：全部通过")
+    print("✓ 该轮修复/该轮修复/该轮修复（平台闭环 + 剩余旗 + 槽位账）：全部通过")
     return 0
 
 

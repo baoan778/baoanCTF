@@ -16,7 +16,7 @@ fgs.py —— pi-lab 黑板（Blackboard）内核
 
 调用方约定
 ----------
-  主会话 / 操作者：用 init / goal / step / fact / relate / hint / solved 直接写（算子权限）
+  主会话 / 用户：用 init / goal / step / fact / relate / hint / solved 直接写（算子权限）
   Worker 子代理  ：只能 `publish` 到 outbox，由主会话 `apply` 校验后合入图
 
 退出码
@@ -43,7 +43,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import urlsplit   # P2-2 兄弟图：从目标资产抠题面前缀
+from urllib.parse import urlsplit   # 该轮修复 兄弟图：从目标资产抠题面前缀
 
 # ★ 发布包（exe / Windows）适配：控制台默认编码可能是 cp936，直接 print 中文会抛
 #   UnicodeEncodeError 而整个命令挂掉。两只流都改成 utf-8 + replace（永不报错）。
@@ -77,17 +77,17 @@ SCHEMA = "fgs/v1"
 #   ② 单行化：正文里的换行折成空格 —— 一条事实只能占一行，伪造不出新章节
 #   ③ 反引号换单引号：防提前关闭/开启代码围栏
 # 注意：只净化**展示路径**，不改图上存储的原值（证据要保真，审计要看原样）。
-# ═══ R12 缺陷 45：导入期不编译正则（防 re.compile SIGSEGV 打死整个进程）═══
+# ═══ 该轮 该缺陷：导入期不编译正则（防 re.compile SIGSEGV 打死整个进程）═══
 #
-# 证据链见 历史复盘 R9-02：崩溃栈停在 re/_compiler.py:582 _code，调用点是本文件
+# 证据链见 实战复盘：崩溃栈停在 re/_compiler.py:582 _code，调用点是本文件
 # 的模块级编译；内核 dmesg 记录 Capturing crash ... signal: 11。R5~R8 把这误记成 FLAKY。
 # 崩溃是概率性的，所以「重跑绿」从不等于「没问题」。
 #
 # 做法：导入期只登记，首次使用时才编译；编译失败 → 记为不可用、查询返回不匹配、
-#       进程继续活着。这样 R9-02 那条崩溃路径被整体移除。
+#       进程继续活着。这样 某轮复盘 那条崩溃路径被整体移除。
 # 边界：挡的是**导入期**崩溃；运行期首次编译若崩仍会死当前线程（那时模块已加载完）。
 class _LazyRegex:
-    """re.compile 的惰性容错替身（缺陷 45）。不可用时所有查询返回「不匹配」，绝不抛。"""
+    """re.compile 的惰性容错替身。不可用时所有查询返回「不匹配」，绝不抛。"""
 
     __slots__ = ("_pat", "_flags", "_rx", "_failed")
 
@@ -199,7 +199,7 @@ def _fill_template(tmpl, values):
     rx = re.compile("|".join(re.escape("{" + k + "}") for k in keys))
     return rx.sub(lambda m: str(values[m.group(0)[1:-1]]), tmpl)
 
-# ── 节点类型（ADR 0035：只保留 Goal / Step / Fact；Hint 是操作者输入通道）──────────
+# ── 节点类型（ADR 0035：只保留 Goal / Step / Fact；Hint 是用户输入通道）──────────
 NODE_TYPES = ("goal", "step", "fact", "hint", "digest")
 
 # ── 关系类型与端点矩阵（ADR 0012，按本模型的节点类型收敛）────────────────────────
@@ -506,7 +506,7 @@ def attempts_of(meta):
 #   --allow-out-of-scope（越界目标）。共同点：**绕过一道机器闸门**。
 #   风险不是开关本身，而是「绕过闸门后，图上的内容直接变成行动依据」。
 #
-# ★ 只打提示，不拦截 —— 与 D-6=A 一致：机器提醒，人做决定。
+# ★ 只打提示，不拦截 —— 与 既定决策=A 一致：机器提醒，人做决定。
 
 
 DANGER_NOTES = {
@@ -1706,7 +1706,7 @@ def cmd_preset(a):
 def cmd_kickoff(a):
     """新题**第一动作**：建板 + 立目标 + 打印该派哪几路。
 
-    为什么单独立一个（2026-10-06，操作者反复反馈）：「每次都说记住了，但实际做题时
+    为什么单独立一个（2026-10-06，用户反复反馈）：「每次都说记住了，但实际做题时
     既不开黑板也不派子代理」。根因是旧文写着「单步小问题不用开」，而我把每道单题都
     归类成小问题；黑板又被定位成多智能体协调 → 单干时看着像纯开销。
     对策：入口压成**一条命令**，且它**必须给出派活清单**。
@@ -1722,7 +1722,7 @@ def cmd_kickoff(a):
     elif a.goal:
         gid = _set_goal(a.project, a.goal, a.actor)
         print(f"✓ Goal {gid}: {a.goal}")
-    # ★ P2-2：`--target` 过去**只打印不落盘**，导致"同前缀"无数据源、兄弟图无从判起。
+    # ★ 该轮修复：`--target` 过去**只打印不落盘**，导致"同前缀"无数据源、兄弟图无从判起。
     #   现在写进图顶层的 `target`（幂等：值没变就不写，避免白刷 revision）。
     if target:
         _set_target(a.project, target)
@@ -1845,7 +1845,7 @@ def goal_discipline_lines(text):
 
 
 def _set_target(pid: str, target: str):
-    """把目标资产写进图顶层 `target`（P2-2 兄弟图的判据来源）。
+    """把目标资产写进图顶层 `target`（该轮修复 兄弟图的判据来源）。
 
     为什么放顶层而不放 goal 节点：`target` 是**这道题的属性**，不随 goal 改写而变
     （`_set_goal` 会覆盖 goal.text/version，放节点里会被连带冲掉）。
@@ -2961,7 +2961,7 @@ def _is_real_flag(text: str) -> bool:
     return True
 
 
-# ── flagq 接线（T2 → 生产路径 · 2026-11-06 操作者定案 D-6=A）─────────────────
+# ── flagq 接线（T2 → 生产路径 · 2026-11-06 用户定案 既定决策=A）─────────────────
 # 背景：board/flagq.py 早就写好（255 行、46 个用例全绿），但全仓 grep 生产零调用 ——
 #   「测试全绿」和「已生效」是两件事，这是最危险的假象。
 # 定案口径：**只告警，不拦截**。理由：`fgs verify` 的逐字溯源（byte-exact）已是硬门禁，
@@ -4103,10 +4103,10 @@ def _as_task_text(pid: str, sid: str | None, step_text: str, brief_path,
 
 
 def _task_prefix(target: str) -> str | None:
-    """从目标资产里抠出**题面前缀**（P2-2 兄弟图用）。
+    """从目标资产里抠出**题面前缀**（该轮修复 兄弟图用）。
 
     为什么要它：`LADDER_ROWS` 的 L0 档写着「前缀与已解题相同时跳过侦察、直接用兄弟图简报」，
-    但直到 2026-11-03 这句话**没有任何实现**（全仓只有那一行提到）。用户 Q16=A 要求实现，
+    但直到 2026-11-03 这句话**没有任何实现**（全仓只有那一行提到）。用户 既定决策 要求实现，
     现已接进 `_sibling_block()` → `fgs brief`（契约见 schema.md §9，验收 test_sibling_graph.py）。
 
     判据只认**结构化前缀**，不做文本相似度（与 R4 广播同一条纪律：R4 也明令禁止
@@ -4133,7 +4133,7 @@ def _task_prefix(target: str) -> str | None:
 
 
 def _sibling_projects(pid: str, g: dict) -> list:
-    """找出与本项目**题面前缀相同**、且**已有坐实结论**的兄弟项目（P2-2）。
+    """找出与本项目**题面前缀相同**、且**已有坐实结论**的兄弟项目。
 
     返回 `[(项目名, 前缀, [可复用的 verified Fact])]`，按可复用事实数降序。
 
@@ -4190,7 +4190,7 @@ def _is_boilerplate(text: str) -> bool:
 
 
 def _sibling_block(pid: str, g: dict) -> list:
-    """兄弟图简报（P2-2）：同前缀的题已经坐实了什么 —— 省掉重复侦察。"""
+    """兄弟图简报：同前缀的题已经坐实了什么 —— 省掉重复侦察。"""
     sibs = _sibling_projects(pid, g)
     if not sibs:
         return []
@@ -4359,7 +4359,7 @@ def _brief_body(a) -> tuple[str | None, str]:
     # ★ E1（sapper blindspot）：把「哪些前提还没验证」显式摆出来 —— 这段以前不存在。
     for _line in blindspot_block(g):
         print(_line)
-    # ★ P2-2 兄弟图：同前缀的题已经坐实了什么 —— 放在「已证伪」之后、留档之前，
+    # ★ 该轮修复 兄弟图：同前缀的题已经坐实了什么 —— 放在「已证伪」之后、留档之前，
     #   因为它们同属"别重复劳动"，读的顺序自然是：别重走死路 → 别重复侦察。
     for _line in _sibling_block(a.project, g):
         print(_line)
@@ -4860,7 +4860,7 @@ def blind_pass(g: dict) -> dict:
 #   （猜测量：可能/也许/疑似），但**缺这条配对校验** —— 一个敢下绝对结论、
 #   却一条未测条件都不写的人，正好钻这个空子。
 #
-# ★ 只读 + 只告警，不改 solved / gate 的任何判定（与 D-6=A 同口径：
+# ★ 只读 + 只告警，不改 solved / gate 的任何判定（与 既定决策=A 同口径：
 #   启发式误判不该否决人工判断）。
 
 UNIVERSAL_DENY_WORDS = ("永远", "所有情况", "完备", "恒真", "不可能", "已排除")
@@ -5038,7 +5038,7 @@ def deny_without_untested(g: dict, pid: str = "") -> list:
 
     ★ 借 cognition.ts 的口径，但**降低强度**：
       原版是「禁止裸写」的硬约束；这里只出告警、不拦 solved。
-      理由与本仓 D-6=A 一致：绝对化表述该被质疑，但不该由启发式否决人的判断。
+      理由与本仓 既定决策=A 一致：绝对化表述该被质疑，但不该由启发式否决人的判断。
     """
     hits = []
     for i, n in sorted((g.get("nodes") or {}).items()):
@@ -5775,7 +5775,7 @@ def _parse_ts(x):
 
 
 def _slot_minutes(pid: str) -> tuple[float, int]:
-    """P2-1：槽位占用分钟数 = **各次派活墙钟时长之和**（并发曲线下的面积）。
+    """该轮修复：槽位占用分钟数 = **各次派活墙钟时长之和**（并发曲线下的面积）。
 
     为什么是「求和」而不是「从最早到最晚的跨度」：两路并行跑 10 分钟，
     实际占用是 **20 个槽位分钟**（占掉 2 个槽位 × 10 分钟），跨度只有 10。
@@ -5807,7 +5807,7 @@ def _slot_minutes(pid: str) -> tuple[float, int]:
 
 
 def _ledger_points(pid: str) -> tuple[int | None, list[str]]:
-    """P2-1：平台得分 = 账本里 accepted 条目的 `reply.awarded` 之和。
+    """该轮修复：平台得分 = 账本里 accepted 条目的 `reply.awarded` 之和。
 
     ★ 取数纪律（与 flags-left 同一条）：**只信平台回执里真有的字段**。
       回执没有 `awarded` 时，这个 flag 记进 `unknown`，整项分数返回 None
@@ -6069,7 +6069,7 @@ def cmd_cost(a):
             hold_s = max(0, int((end - solved_at).total_seconds()))
     density = round(flags / mins, 3) if mins else None
 
-    # ── P2-1 槽位得分密度：points_per_slot_minute ──────────────────────────
+    # ── 该轮修复 槽位得分密度：points_per_slot_minute ──────────────────────────
     # 口径（与 §0.3 的 20.02 分/槽位分钟**同一个定义**，不是另起一套）：
     #   §0.3 是「总分 ÷ 槽位占用分钟」，其中槽位占用 = **并发曲线下的面积**
     #   = 各会话时长之和（两路并行 1 分钟 = 2 个槽位分钟）。
@@ -6133,7 +6133,7 @@ def cmd_cost(a):
         print(json.dumps({**{k: v for k, v in rows}, "verified_per_step":
                           (round(len(ver) / len(done), 2) if done else None),
                           "flags_per_min": density,
-                          # ★ 机器可读的 P2-1 字段（验收要求的字段名）
+                          # ★ 机器可读的 该轮修复 字段（验收要求的字段名）
                           "points_per_slot_minute": ppm,
                           "slot_minutes": round(slot_minutes, 2) if slot_minutes else None,
                           "points": points,
@@ -6662,7 +6662,7 @@ def _is_operator_hint(n: dict) -> bool:
     if n.get("type") != "hint":
         return False
     frm = (n.get("from") or "").strip().lower()
-    if frm in ("operator", "human", "user", "操作者"):
+    if frm in ("operator", "human", "user", "用户"):
         return True
     # 没有 from 或 from 是 agent/worker 的，只要不带自动标记也不算人工
     return not (n.get("text") or "").startswith(BROADCAST_MARK)
@@ -6857,7 +6857,7 @@ def cmd_solved(a):
                 f"  修法：先把它挂上去，例如\n"
                 f"    fgs relate {a.project} --type satisfies --from {a.fact} --to {goals[0]}"
             )
-        # ★ 并行闸门（2026-10-06 加；操作者反馈「说记住了但实际从不派活」）
+        # ★ 并行闸门（2026-10-06 加；用户反馈「说记住了但实际从不派活」）
         # 根因：旧文写着「单步小问题不用开」+ 黑板被定位为多智能体协调 → 单题时我当成纯开销。
         # 对策：机器闸门 —— 没派过任何一路就必须显式声明理由（进审计）。
         lanes = [i for i, n in g["nodes"].items()
@@ -7251,14 +7251,14 @@ def cmd_flag_reconcile(a):
                 print(f"     为什么：{str(s.get('retest_why'))[:120]}")
 
 
-# ── P1-1：平台回执闭环（账本 → tsec submit → 回执回写账本）────────────────────
-# 背景（LEARNING_CHECKLIST §P1-1）：账本本体早已存在且 31 项回归全绿，
+# ── 该轮修复：平台回执闭环（账本 → tsec submit → 回执回写账本）────────────────────
+# 背景（LEARNING_CHECKLIST §该轮修复）：账本本体早已存在且 31 项回归全绿，
 #   真正缺的只是「没人自动跑 tsec submit」这一跳。本函数**只加这一跳**，
 #   不动账本结构、不新造判定式 —— 判定仍走 _judge_reply（只认 reply["correct"]）。
 #
 # 为什么用 subprocess 调 tsec 而不 import tsecbench：
 #   tsecbench.py 顶层有 VPN/配置探测与 sys.exit 路径，import 会把 CLI 的退出语义
-#   带进内核（Q13=A：复用，但不共享生命周期）。subprocess 拿到的是**它真实的 stdout
+#   带进内核（既定决策：复用，但不共享生命周期）。subprocess 拿到的是**它真实的 stdout
 #   与退出码**，正是我们想要的证据。
 TSEC_SUBMIT_CMD = os.environ.get("PI_FGS_TSEC") or "tsec"
 
@@ -7404,7 +7404,7 @@ def _tsec_submit(unique_code: str, flag: str, timeout: int = 60):
 def cmd_flag_auto(a):
     """④ 自动闭环：记账（若未记）→ tsec submit → 回执回写账本。
 
-    ★ 这是 P1-1 的唯一新增跳板。语义严格等于人工做这三步：
+    ★ 这是 该轮修复 的唯一新增跳板。语义严格等于人工做这三步：
         fgs flag-record --flag F        （拿到 flag 先落盘，崩溃不丢）
         tsec submit <code> F            （真去问平台）
         fgs flag-submit --reply '<回执>'（把整份回执存进账本）
@@ -7486,7 +7486,7 @@ def cmd_flag_auto(a):
     return 0 if state == "accepted" else 1
 
 
-# ── P1-4：多旗题「还剩几面」（Q14=C：不动 solved 语义，只加查询）──────────────
+# ── 该轮修复：多旗题「还剩几面」（既定决策：不动 solved 语义，只加查询）──────────────
 # 为什么不改 solved：solved 是 gate 的判据根基（board/schema.md 三条纪律之一），
 #   动它伤害面太大。这里只读 `tsec list` 的 correct_flag_count / flag_count 出「剩余」，
 #   让 `fgs next` 在「该实例还有旗」时不再给 none。
@@ -7592,7 +7592,7 @@ def cmd_flags_left(a):
     return 0
 
 
-# ── P1-3：槽位账（Q12=A→B，并发提到 3 之后更需要它）──────────────────────────
+# ── 该轮修复：槽位账（既定决策→B，并发提到 3 之后更需要它）──────────────────────────
 # 要回答的问题只有一个：**同时最多 3 个槽位，该关哪个？**
 # 赛事数据（events-2026-10-17，230 事件）给出的分界线：
 #   得分→关闭滞后中位 3.4 分钟，但有 9 题 >20 分钟 —— 那 9 题就是被白占的槽位。
@@ -7725,7 +7725,7 @@ def _accepted_flags(pid: str) -> list[tuple[str, str]]:
 
 
 def cmd_confirm(a):
-    """操作者确认 flag 正确 —— 这是**启动 WP 生成的闸门**。
+    """用户确认 flag 正确 —— 这是**启动 WP 生成的闸门**。
 
     为什么单独立一个：`fgs solved` 只是「agent 认为解完了」，那是 agent 的自我评价；
     `confirm` 是「人看过平台回显，确认这个 flag 是真的」。
@@ -8005,7 +8005,7 @@ def _validate_outbox(g: dict, p: dict, pid: str = ""):
         if not p.get("text"):
             raise Fail("step 缺 text")
         # ★ 授权范围守卫也要盖住 **Worker 路径**：Worker 不能自己给自己开越界权限，
-        #   要打界外就由操作者先 `fgs scope … --add`（不提供 --allow-out-of-scope）
+        #   要打界外就由用户先 `fgs scope … --add`（不提供 --allow-out-of-scope）
         if p.get("target"):
             _ok, _why = scope_state(g, p["target"])
             if _ok is False:
@@ -8318,7 +8318,7 @@ def cmd_show(a):
 
     print(f"══━ {g['project_id']}  (kind={g['kind']}, rev={g['revision']}) ═══")
     if g.get("target"):
-        # P2-2：target 是兄弟图的判据来源，看不见就没法排查"为什么没串上"
+        # 该轮修复：target 是兄弟图的判据来源，看不见就没法排查"为什么没串上"
         _pfx = _task_prefix(g["target"])
         print(f"  🎯 目标资产：{g['target']}" + (f"   (同族前缀 {_pfx})" if _pfx else ""))
     if g["solved"]:
@@ -8964,7 +8964,7 @@ def cmd_audit(a):
 
     为什么单独一条命令：`load()` 把坏节点摘掉后只在 stderr 甩几行警告，
     现场（`_nodes_bad` 里的原始数据）随即被下一次 save 覆盖掉。
-    想让操作者「事后还能看见坏在哪、原值长什么样」，必须有一条**只读**命令
+    想让用户「事后还能看见坏在哪、原值长什么样」，必须有一条**只读**命令
     直接读原始 JSON 再校验一遍，**不经过 load() 的摘除逻辑**。
 
     与 `fgs doctor` 的分工：doctor 查**跨文件一致性**（图 vs 台账 vs outbox）；
@@ -10287,7 +10287,7 @@ def _finish_scan(g: dict) -> dict:
 
 
 def cmd_finish_all(a):
-    """终局收口五步：**幂等 + 可重入**，只做不依赖平台 API 的那一半（Q8=A）。
+    """终局收口五步：**幂等 + 可重入**，只做不依赖平台 API 的那一半。
 
     顺序抄 sapper watchdog.sh:423-459 的 finish_all —— 先停写、再收投递、
     再扫 flag、再释放、最后落审计。顺序反了会「边收边写」。
@@ -10371,7 +10371,7 @@ def cmd_finish_all(a):
         print("       ⚠ 没确认不等于没拿到：到点最亏的就是「拿到了但没交」")
 
     print("\n  4) 释放平台实例 —— 需人工")
-    print("     本机无平台 API（Q8=A 定的是先做不依赖平台的半环），"
+    print("     本机无平台 API（既定决策 定的是先做不依赖平台的半环），"
           "请到平台逐个关闭未结算实例")
 
     print("\n  5) 已落审计：finish_all（重跑只刷新计数，不重复产生副作用）")
@@ -10402,7 +10402,7 @@ def cmd_log(a):
               f"要追就 `grep -n . {p}` 人工看）", file=sys.stderr)
 
 
-# ── 未验证假设清单（E1，移植自 sapper templates/blindspot.md + _dispatch_blindspot）──
+# ── 未验证假设清单（E1，移植自 sapper 仓的 templates/blindspot.md + _dispatch_blindspot）──
 #
 # 来源证据（2026-11-09 实地读码）：
 #   [S] 源码/sapper-v2-18-champion/templates/blindspot.md:1-60 —— 任务不是"提方案"，
@@ -10454,7 +10454,7 @@ _OBSERVED_RX = _rx(r"(实测|回显|输出显示|复现|curl|响应|byte-exact|�
 #   宿主形态 = 用的是哪种地址形式（同一目标可有的不同入口）
 #   提交路径 = 直接提交还是经外部包装（绕过中间层 / 走代理 / 换 method）
 #
-# ★ 只读纯函数，只出建议，不改任何门禁（与 D-6=A 同口径）。
+# ★ 只读纯函数，只出建议，不改任何门禁（与 既定决策=A 同口径）。
 
 # 三要素在 fact 里的表达：meta 键 + 正文关键词兜底
 # ★ 判据取向：**宽进**。命中任一关键词就算「这一要素写了」。
@@ -11249,7 +11249,7 @@ def main():
     p.add_argument("project")
 
     p = add("flag-auto", cmd_flag_auto,
-            help="[P1-1] 自动闭环：记账→tsec submit→回执回写账本（判定仍只认 reply.correct）")
+            help="[该轮修复] 自动闭环：记账→tsec submit→回执回写账本（判定仍只认 reply.correct）")
     p.add_argument("project")
     p.add_argument("--code", required=True, help="平台 unique_code（哪道题）")
     p.add_argument("--flag", help="flag 值（首次提交给；重投可省，从账本取）")
@@ -11258,12 +11258,12 @@ def main():
     p.add_argument("--by", dest="actor", default="operator"); p.add_argument("--note")
 
     p = add("flags-left", cmd_flags_left,
-            help="[P1-4] 多旗题还剩几面（只读 tsec list，不动 solved 语义）")
+            help="[该轮修复] 多旗题还剩几面（只读 tsec list，不动 solved 语义）")
     p.add_argument("--json", action="store_true", help="机器可读输出")
     p.add_argument("--timeout", type=int, default=60, help="tsec list 超时秒数（默认 60）")
 
     p = add("slot", cmd_slot,
-            help="[P1-3] 槽位账：谁在占槽/占多久/有无产出/到点该关哪个（只出建议不代劳）")
+            help="[该轮修复] 槽位账：谁在占槽/占多久/有无产出/到点该关哪个（只出建议不代劳）")
     p.add_argument("project")
     p.add_argument("--cap", type=int, default=3, help="并发上限（Q12 已定 3）")
     p.add_argument("--warn-min", type=float, default=20.0, help="超过多少分钟提示观察")

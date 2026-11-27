@@ -118,9 +118,9 @@ Windows 用户见 [README-部署.md](https://github.com/baoan778/baoanCTF/blob/m
 
 | 项 | 数量 |
 |---|---|
-| 回归测试 | **151 条**（CI 双平台全绿）— 唯一事实来源是 `python3 tools/testcount.py` |
-| 黑板内核 | `board/fgs.py` **11,316 行**，**零第三方依赖**（纯 stdlib） |
-| 命令入口 | **118** 个（`tools/bin/`） |
+| 回归测试 | **150 条**（CI 双平台全绿）— 唯一事实来源是 `python3 tools/testcount.py` |
+| 黑板内核 | `board/fgs.py` **11.3k 行**，**零第三方依赖**（纯 stdlib） |
+| 命令入口 | **112** 个（`tools/bin/`） |
 | 知识库 | 索引后 **3 万+ 块**（PoC / WP / 参考 / 笔记），带 `文件:行号` 指针 |
 | CTF 技能 | **17** 个题型方法论 |
 | 角色注册表 | **10** 个 CTF 角色 + 模型路由 |
@@ -150,7 +150,7 @@ Windows 用户见 [README-部署.md](https://github.com/baoan778/baoanCTF/blob/m
 
 ```
 board/            黑板内核 fgs.py（11k 行，纯 stdlib）+ 回归测试
-tools/            工具链 118 个入口 + 知识库（31k 块）
+tools/            工具链 112 个入口 + 知识库（31k 块）
 skills/           17 个 CTF 题型方法论
 agent-template/   10 个角色注册表 + 模型路由
 docker/           容器镜像（全套 CTF 工具预装）

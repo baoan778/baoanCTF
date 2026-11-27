@@ -209,10 +209,10 @@ def main():
         except Exception as e:
             check("--json 可解析", False, f"{e} {out[:200]}")
 
-        print("9d) P2-1 points_per_slot_minute：数值必须能复算（points ÷ slot_minutes）")
+        print("9d) 该轮修复 points_per_slot_minute：数值必须能复算（points ÷ slot_minutes）")
         # 造一个已知场景：派活 20 分钟前开始 + 一条 awarded=300 的 accepted 回执
         # → 期望 300 ÷ 20 = 15 分/槽位分钟。算不出来就说明口径错了。
-        fgs("init", PID + "3", "--kind", "ctf", "--goal", "P2-1 复算")
+        fgs("init", PID + "3", "--kind", "ctf", "--goal", "该轮修复 复算")
         fgs("step-add", PID + "3", "面1")
         fgs("run-register", PID + "3", "s001", "--task", "打面1", "--by", "op")
         runs_p = tmp / "projects" / (PID + "3") / "runs.jsonl"
@@ -231,7 +231,7 @@ def main():
                   ppm is not None and abs(ppm - pts / sm) < 0.02,
                   f"ppm={ppm} points={pts} slot_minutes={sm}")
         except Exception as e:
-            check("P2-1 --json 可解析", False, f"{e} {out[:300]}")
+            check("该轮修复 --json 可解析", False, f"{e} {out[:300]}")
 
         print("9e) ★ 拿不到 awarded → 报「无法计算」，绝不当 0（多旗题每面分值不同，推分就是编数据）")
         fgs("init", PID + "4", "--kind", "ctf", "--goal", "无 awarded")

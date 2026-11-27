@@ -53,7 +53,7 @@ function stripFrontmatter(raw: string): string {
 		.trim();
 }
 
-// ★ 2026-11-14 修 P1-6（实测必现）：原来缺文件时返回 `${MARKER}\nGODMODE prompt missing: ...`，
+// ★ 2026-11-14 修 该轮修复（实测必现）：原来缺文件时返回 `${MARKER}\nGODMODE prompt missing: ...`，
 //   而默认 enabled=true —— 于是**每条会话**的系统提示词里都多出一段「自称已开启、
 //   内容却是一行报错」的垃圾（实测 sections.godmode_deepseek 就长这样，146B/轮）。
 //   对外宣称 ON、实际零内容，最坏的是有人会据此以为 flash 已被调教过。
@@ -78,7 +78,7 @@ function looksLikeHostJob(text: string): boolean {
 
 // 2026-10-10 改：原来的最后一句是**祈使句**（Fetch the named host now: headers, login page, …），
 // 会被当成任务的一部分读（"去抓这个主机"），而它跟用户真正要问的事可能毫无关系。
-// 现在改成**陈述句语境**：保留"这是操作者的靶场、不需要授权、不要拒绝"的信息，
+// 现在改成**陈述句语境**：保留"这是用户的靶场、不需要授权、不要拒绝"的信息，
 // 但不再替用户下命令。（marker 保持 SANDBOX_FIXTURE_LOCK 不变，系统提示词那边仍按它识别。）
 export function wrapUserText(text: string): string {
 	if (text.includes(WRAP_MARK)) return text;
@@ -118,7 +118,7 @@ export default function deepseekFlashGodmode(pi: ExtensionAPI) {
 
 	pi.on("input", (event, ctx) => {
 		if (!enabled || !isDeepseekFlash(ctx.model)) return { action: "continue" as const };
-		// ★ 2026-10-10 修：只包装**操作者手敲的**输入（interactive）。
+		// ★ 2026-10-10 修：只包装**用户手敲的**输入（interactive）。
 		//   原来只跳过 "extension"，而 InputSource 是 interactive | rpc | extension ——
 		//   子代理的任务原文走 rpc，于是每个子代理的 brief 都被塞进 4 行伪造前提
 		//   （含 "Fetch the named host now: headers, login page, ..."），实测 12+ 个子代理 transcript 命中。

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """录题台的粘贴回归：终端粘贴（bracketed paste）+ Ctrl+Y 读剪贴板
 
-为什么单独建这个测试（2026-10-10 操作者实测报障）：
+为什么单独建这个测试（2026-10-10 用户实测报障）：
   「有些东西粘贴不进录题台，我连文字都粘贴不进去」。
   根因是两条**设计假设撞上终端现实**：
     ① Windows Terminal 默认把 Ctrl+V 绑成 `Terminal.PasteFromClipboard`

@@ -106,7 +106,7 @@ bash /usr/local/bin/provision-agent.sh || die "provision-agent.sh 失败"
 bash "$ROOT/tools/py-bridge.sh" || log "py-bridge.sh 失败（不阻断，python3 仍可用但少了 venv 库）"
 
 # ②·2 自动恢复解题链路（幂等；失败不阻断启动）
-#   ★ 2026-11-19 优化 07：容器重启后 parallel_solver 与 supervise.py 都不自动起 ——
+#   ★ 2026-11-19 某轮优化：容器重启后 parallel_solver 与 supervise.py 都不自动起 ——
 #     实测 14:34 重启后空转 10 分钟才被人工发现，限时赛里等于直接丢分。
 #   脚本自己有 4 道判据（停止标记 / 已在跑 / 平台已终结 / 平台在跑），
 #   **宁可不启不可错启**：run 结束或全通关时绝不留下空转守护。

@@ -9,13 +9,13 @@
  *                                                                        （本插件画的会话仪表盘）
  *
  * 样式：`/time style compact|full|off`（落 <agentDir>/think-clock.json）
- *   compact（默认，2026-10-10 操作者要求精简）：⏱ 思考 + ⚡ 速度 | 轮数 + ↑ token
+ *   compact（默认，2026-10-10 用户要求精简）：⏱ 思考 + ⚡ 速度 | 轮数 + ↑ token
  *   full   （老版全量）：思考 · 工具 · 速度 | 轮 · token · 墙 · 北京
  *   off    ：不画这条线（Working 嵌框保留）
  *
  * 工作线（第一条横线）右侧：MCP 指示器 `🔌N`（N = 启用的 server 数）。
  *   适配器原本那行「🔌 MCP: 1 server enabled」已用 <agentDir>/mcp-adapter.json
- *   的 settings.mcpFooterStatus="off" 关掉（2026-10-10 操作者要求）。
+ *   的 settings.mcpFooterStatus="off" 关掉（2026-10-10 用户要求）。
  *
  * ⚠️ **第一条横线为什么以前是空的（踩过的坑，别改回去）**
  * pi 的 `CustomEditor` 有 `embedWorkingStatus` 选项，只有它为 `true` 时，
@@ -100,7 +100,7 @@ function fitBorder(left, right, width, border, fill = border) {
 }
 
 // ── 底部横线样式表（左/右两段各列字段名）───────────────────────────
-// 2026-10-10 操作者：默认那条太长了 → 默认改 compact；full 保留老版；off 彻底不画。
+// 2026-10-10 用户：默认那条太长了 → 默认改 compact；full 保留老版；off 彻底不画。
 export const FOOTER_LAYOUTS = {
   compact: { left: ["think", "tps"], right: ["turns", "tokens"] },
   full: {
@@ -654,7 +654,7 @@ export default function (pi) {
             }
 
             // ── 第一条横线（工作线）右侧：MCP 指示器 ──────────────────
-            // 2026-10-10 操作者：适配器原来那行「🔌 MCP: 1 server enabled」太长且占位，
+            // 2026-10-10 用户：适配器原来那行「🔌 MCP: 1 server enabled」太长且占位，
             // 移到这里，且只留「🔌N」（N = 启用的 server 数；配置里 disabled 的不算）。
             // 旧的适配器那一行已在 .pi/agent/mcp-adapter.json 设 mcpFooterStatus=off 关掉。
             renderTopBorder(width, hiddenLineCount) {

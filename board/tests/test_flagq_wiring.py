@@ -7,7 +7,7 @@
 但 `grep -rn "import flagq|from flagq" --include=*.py . | grep -v /tests/` **零命中**。
 "测试全绿"和"已生效"是两件事 —— 这是最危险的假象。
 
-操作者定案（D-6=A）：**只告警，不拦截**。
+用户定案（既定决策=A）：**只告警，不拦截**。
 理由：`fgs verify` 的逐字溯源（byte-exact）已经是硬门禁；flagq 是启发式，
 启发式误判不该否决人工判断，它只负责把"为什么不像真 flag"摆到人面前。
 

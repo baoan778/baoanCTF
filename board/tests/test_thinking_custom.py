@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_thinking_custom.py — R11 A：推理档位可自定义（操作者 2026-11-22 要求）
+"""test_thinking_custom.py — 该轮 A：推理档位可自定义（用户 2026-11-22 要求）
 
 为什么
 ------
@@ -67,7 +67,7 @@ def main():
 
     print("A) 默认值不变")
     got = load_with_env({})
-    ck("A1 默认 high/high/high（操作者 2026-11-22：维持 high 或极高）", got == ["high", "high", "high"], got)
+    ck("A1 默认 high/high/high（用户 2026-11-22：维持 high 或极高）", got == ["high", "high", "high"], got)
 
     print("B) 环境变量可覆盖")
     got = load_with_env({"PI_THINK_FIRST": "max"})

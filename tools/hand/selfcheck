@@ -679,7 +679,7 @@ fi
 #   passagemath 的 sage 落在 tools/venv/bin（不在 PATH），且缺 sage.all 时命令在也跑不通。
 #   旧判据两头都错：装好了说没装、装坏了说装好（用户看 selfcheck 8 条告警里就有这条）。
 # ★ 2026-11-07（D1=B）：宿主跑不通时**再问容器**。
-#   实测：宿主缺 passagemath-symbolics（该模块**没有 Windows wheel**，pip 直接
+#   实测：宿主缺 passagemath-symbolics（该轮修复**没有 Windows wheel**，pip 直接
 #   No matching distribution —— 平台限制，不是没装好）；容器里 `sage -c print(2^100)` 正常。
 #   判据改成三级：宿主真跑通 → 容器跑通（标注，不告警）→ 两边都不行才 warn。
 _sage_probe_ctr() {

@@ -14,7 +14,7 @@
 #       容器用 http_proxy 指过去 → 容器内一切 HTTP(S) 客户端自动走 VPN 路由。
 #       实测：容器经此代理读到 10.99.99.99:9099 的 "HELLO-FROM-MYLINUX"。
 #
-# 为什么在 MyLinux 跑而不是容器里：VPN 归宿主（Q18=A）。VPN 起来后
+# 为什么在 MyLinux 跑而不是容器里：VPN 归宿主。VPN 起来后
 #   MyLinux 有 tun0 + 到靶场的路由，代理只是把容器的连接受托给它。
 #
 # 用法（MyLinux 侧，需 root 或已起 VPN 的普通用户）：

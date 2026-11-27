@@ -159,7 +159,7 @@ export default function BenchPage() {
             </span>
           </span>
           <span className="row">
-            {/* 守护节点：它不在 = 链路挂了以后没人自动拉起（优化 #7 那课） */}
+            {/* 守护节点：它不在 = 链路挂了以后没人自动拉起（某轮优化 那课） */}
             <span className={"dot " + (s?.procs?.supervisor ? "ok" : "bad")} />
             <span>守护</span>
             <span className="muted mono">

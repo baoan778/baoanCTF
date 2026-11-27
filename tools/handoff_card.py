@@ -351,7 +351,7 @@ def render(card, max_lines=CARD_MAX_LINES) -> str:
         pits.append("- 有 %d 处未提交：先看清是什么，别在他人改动上直接覆盖"
                     % g["dirty_count"])
     if sv.get("balance") and not sv["balance"].get("allow"):
-        pits.append("- 余额闸门是拦着的：起新一轮前先充值或确认走的是哪个端点（R5-06 #59）")
+        pits.append("- 余额闸门是拦着的：起新一轮前先充值或确认走的是哪个端点（某轮复盘 #59）")
     if ag and ag["left"] < 500:
         pits.append("- AGENTS.md 只剩 %d B：新规则请进 docs/，别塞常驻区" % ag["left"])
     if not pits:

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""kb_gap.py —— D-4 的执行工具：判断 OpenSecurity 的知识库哪些**真的值得并入**。
+"""kb_gap.py —— 既定决策 的执行工具：判断 OpenSecurity 的知识库哪些**真的值得并入**。
 
 为什么要工具而不是"看着挑"
 --------------------------
-D-4 的问题是「152 篇里挑 3~5 篇并进我方 kb」，但我方 kb 已有 30,819 块。
+既定决策 的问题是「152 篇里挑 3~5 篇并进我方 kb」，但我方 kb 已有 30,819 块。
 **凭印象挑 = 挑的都是我恰好记得的主题**，那不叫判断，叫偏好。
 正确判据只有一条：**这篇东西我方 kb 里有没有同类内容**。
   有的 → 并进去只是重复，稀释检索面；
@@ -265,7 +265,7 @@ def _selftest() -> int:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="D-4：判断 OpenSecurity 知识库哪些值得并入")
+    ap = argparse.ArgumentParser(description="既定决策：判断 OpenSecurity 知识库哪些值得并入")
     ap.add_argument("--selftest", action="store_true")
     sub = ap.add_subparsers(dest="cmd")
     p = sub.add_parser("scan")

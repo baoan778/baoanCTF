@@ -3,7 +3,7 @@ import { usePoll } from "../lib/poll";
 import { api } from "../api";
 
 /**
- * 「下一刀」卡（W-P0-3）
+ * 「下一刀」卡
  *
  * 为什么要有这一屏：对话页空白态之所以难看，根子不是缺装饰，是**没有决策可做**——
  * 一屏空白 + 一个输入框，等于让人自己从零想「现在该干嘛」。抢分时最贵的就是这段空转。
@@ -37,7 +37,7 @@ export default function NextMoveCard({ onPick }: { onPick?: (text: string) => vo
   const [data, setData] = useState<Payload | null>(null);
   const [err, setErr] = useState("");
   const [open, setOpen] = useState<string>("");
-  // W-P2-1：展开一条时去知识库找同题经验的指针（只查一次，缓存在组件内；
+  // 该轮修复：展开一条时去知识库找同题经验的指针（只查一次，缓存在组件内；
   // 服务端另有 10 分钟缓存，所以重复点不同条也不重复跑进程）
   const [kb, setKb] = useState<Record<string, KbHit[] | "loading" | "none">>({});
 

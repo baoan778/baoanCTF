@@ -71,7 +71,7 @@ if printf "%s" "$ALL" | grep -qiE "php|\\.php"; then
   python3 "$PL" search "bypass" 2>/dev/null | head -3
 fi
 ACT=$(printf "%s" "$BODY" | grep -oiE "action=[^ >]+" | head -1 | cut -c8- | tr -d "\"\x27")
-# ★ 2026-11-14 P1-3：action 为空时不能干等，要按当前 URL 推断 POST 端点（xben-089 实测 405）
+# ★ 2026-11-14 该轮修复：action 为空时不能干等，要按当前 URL 推断 POST 端点（xben-089 实测 405）
 if [ -z "$ACT" ] && printf "%s" "$BODY" | grep -qi "<form[^>]*method=[\"\x27]*post"; then
   ACT="$U"
   echo "  [表单无 action] POST 回当前地址：$ACT"

@@ -64,7 +64,7 @@ def pending_codes(client) -> list[str]:
 
 
 # 按难度给预算。★ 2026-11-19 校准（data-driven，不再是拍脑袋）。
-# ★ 2026-11-20 优化 13：数值搬到 tools/solve_policy.py（唯一事实来源）。
+# ★ 2026-11-20 某轮优化：数值搬到 tools/solve_policy.py（唯一事实来源）。
 #   原因：同一份策略被抄了 3 份且已漂移 —— 这里 150/300/480，而 bench/live.py 与
 #   bench/todo.py 还停在 120/180/300（实况页显示的「下一轮预算」因此是错的）。
 #   下面的 DIFF_BUDGET 保留为**别名**（有测试与外部脚本按名字读它）。
@@ -96,7 +96,7 @@ from solve_policy import (  # noqa: E402
 DIFF_BUDGET = dict(_POLICY_BUDGET)
 
 
-# ★ 2026-11-19 优化 #10：队列 LPT 排序（Longest Processing Time first）。
+# ★ 2026-11-19 某轮优化：队列 LPT 排序（Longest Processing Time first）。
 #   背景：parallel_solver 每轮用 p.communicate() 等**全部** shard 退出才起下一轮，
 #   于是最快的那 1~2 路要在轮尾空等最慢的那路。实测 run 50607 六轮的轮尾跨度
 #   467/586/962/2284/701/453s，**合计损失 5559s 槽位容量 = 3 槽总容量的 21.1%**
@@ -140,7 +140,7 @@ def pending_with_budget(client) -> list[str]:
     out = []
     for c in pend:
         tries = _lg.attempts(c.unique_code) if _lg else 0
-        # ★ 2026-11-20 优化 13：预算与档位全部问 tools/solve_policy.py。
+        # ★ 2026-11-20 某轮优化：预算与档位全部问 tools/solve_policy.py。
         #   原来这段是「就地算」的第三份副本（另外两份在 bench/live.py、bench/todo.py），
         #   改基线时只改这一份，实况页显示的数字立刻与真实下发值不一致。
         # ★ R3-A（2026-11-20）进展感知预算：多传一个 lvl（连续有进展的轮数）。
@@ -151,7 +151,7 @@ def pending_with_budget(client) -> list[str]:
         b = _policy_budget(c.difficulty or "", tries, lvl)
         # ★ R4-B（2026-11-21）：升 pro 加一道「上一轮有没有资产」的门。
         #   原来只看尝试次数 → 上一轮超时、零候选、零事实的题照样拿最贵的模型
-        #   重跑（138 run 实测 081 k=5：$0.0820 / 693s / 0 分）。
+        #   重跑（历史会话 实测 081 k=5：$0.0820 / 693s / 0 分）。
         #   没跑过（last_round 为 None）→ asset 保持 True，老行为不变。
         _lr = _lg.last_round(c.unique_code) if _lg else None
         _asset = _policy_asset(_lr.get("rc"), _lr.get("cands", 0), _lr.get("facts", 0)) \
@@ -217,7 +217,7 @@ def main() -> int:
                 try:
                     _chs_rnd = client.list_challenges()
                     _scores_rnd = {c.unique_code: int(c.total_score or 0) for c in _chs_rnd}
-                    # ★ 2026-11-19 优化 #10：队列 LPT 排序要用难度先验（见下面 qfile.write_text）。
+                    # ★ 2026-11-19 某轮优化：队列 LPT 排序要用难度先验（见下面 qfile.write_text）。
                     _diff_rnd = {c.unique_code: (c.difficulty or "").lower() for c in _chs_rnd}
                 except Exception:  # noqa: BLE001
                     _scores_rnd = {}
@@ -233,7 +233,7 @@ def main() -> int:
             print(f"[parallel] 第 {rnd} 轮：全部通关，收工", flush=True)
             return 0
         # ★★ 2026-11-20 R1-O2：跑前问一次余额。
-        #   血账：整轮 138 run / $5.120，余额 3.97→1.12 CNY，而调度器全程不知道余额；
+        #   血账：整轮 历史会话 / $5.120，余额 3.97→1.12 CNY，而调度器全程不知道余额；
         #   唯一与钱有关的熔断 .quota_exhausted 只在**吃到 402 之后**才写。
         #   查不到余额一律放行（fail-open）：宁可白跑一轮，也不能因网络抖动停掉比赛。
         #   旁路：PI_LAB_SKIP_COSTGUARD=1 直接跳过（接口改版/离线演示时用，别当常态）。
@@ -277,7 +277,7 @@ def main() -> int:
                 _cap = float(_cap_env) if _cap_env else _policy_cap()
             except ValueError:
                 _cap = _policy_cap()
-            # ★★ D4（2026-11-23，操作者拍板「按连续 N 轮零资产停」）：
+            # ★★ D4（2026-11-23，用户拍板「按连续 N 轮零资产停」）：
             #   与成本上限是**或**关系：cost 看钱，zero 看连续性。
             #   实测差别：一道 $0.10 的题连啃 6 轮零资产，stop_by_cost 永不触发
             #   （没花到 $0.45），但它照样在烧槽位 —— 这才是 D4 要治的。
@@ -309,7 +309,7 @@ def main() -> int:
             # ★ 2026-11-14 用户要求：跳过没价值的题，优先挑有把握快速解出的。
             #   按 **分值 / 该题历史平均耗时** 排序；没跑过的题最优先（成本下限最低）。
             _scores = dict(_scores_rnd)
-            # ★ 2026-11-14 P2-1 修：原来冷/热两池各自排序，但冷池整体后置也不对 ——
+            # ★ 2026-11-14 该轮修复 修：原来冷/热两池各自排序，但冷池整体后置也不对 ——
             #   实测 084（ROI 0.71）排在 056（0.82）前面。改为**合并后统一按 ROI 排**，
             #   冷池只记标记（用于日志提示），不再单独成池。
             _retry = [c for c in todo if int((_lg.data.get(c) or {}).get("rejected", 0)) > 0]
@@ -362,7 +362,7 @@ def main() -> int:
                     _wb = {ln.split(":")[0]: ln for ln in pending_with_budget(_c)}
             except Exception:  # noqa: BLE001
                 _wb = {}
-            # ★ 优化 #10：写队列前按 LPT 重排（见 lpt_order 定义处的实测数据）。
+            # ★ 某轮优化：写队列前按 LPT 重排（见 lpt_order 定义处的实测数据）。
             try:
                 from solve_ledger import Ledger as _L  # noqa: PLC0415
                 _lgq = _L()

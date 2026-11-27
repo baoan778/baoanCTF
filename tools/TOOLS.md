@@ -112,7 +112,7 @@
 |---|---|
 | `intake` | ★ **CTF 录题台（浏览器版）**（自研 `tools/intake.py`，纯标准库）：浏览器填表（题面/类型/附件/靶场）→ 落 `work/inbox/<pid>.json` + 附件 → pi 侧扩展 `ctf-inbox` 每 4s 扫一次，把结构化题面当**用户消息**投给 agent（正忙则 `followUp` 排队）。Windows 双击 `open-intake.bat` 即用（支持拖文件上传）；`intake --once card.json` 可脚本投递；`intake --port N` 换端口。⚠ 超出 24h 的卡片不自动发（须 `/inbox fire <n>`）。**平时用 F2 的 TUI 版即可，这个是备用/大表单** |
 | `/inbox`（pi 命令） | 收件箱面板：排队/已发/过期待确认；`/inbox fire <n>` 手动发射；`/inbox on\|off` 自动发射开关 |
-| `/ctf`（pi 命令） | ★ **值班台**（按需打开）：在打哪几题 / 黑板事实进度 / flag 候选 / 会话耗时与上下文占用（读 `board/projects/*/graph.json` + `log/flag-watch.jsonl`）。注：常驻状态栏已于 2026-10-10 按操作者要求取消 |
+| `/ctf`（pi 命令） | ★ **值班台**（按需打开）：在打哪几题 / 黑板事实进度 / flag 候选 / 会话耗时与上下文占用（读 `board/projects/*/graph.json` + `log/flag-watch.jsonl`）。注：常驻状态栏已于 2026-10-10 按用户要求取消 |
 | **`F2` / `/intake`** | ★ **窗口内录题台**（`.pi/agent/extensions/ctf-intake-tui.ts`）：TUI 弹表单（题名/类型/靶场·目标/flag格式/附件路径/**题目内容**）→ `Ctrl+Y`（或直接**终端粘贴**）灌题面 → `Ctrl+S` 提交 → 卡片落盘 + **直接当用户消息发给 agent**。不离开终端 |
 | `triage`（工具） | ★ **附件开箱摸形状**（`ctf-triage.ts`）：一次调用给出 类型/哈希/大小 + 按类型分流的只读侦察（zip→列目录・图片→exif/binwalk・流量→capinfos/协议树・ELF→架构与保护）+ **该起哪份 skill**；只读，不解包写盘 |
 | `wpcollect` | ★ **WP 素材收集器**（`tools/wpcollect.py`）：`wpcollect <pid>` → 把黑板图/附件清单/flag 窗口/证据目录排成 `work/<pid>/WP-draft.md` 骨架，`(待补)` 处等结论。也可 `/wp <pid>` |

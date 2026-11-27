@@ -159,7 +159,7 @@ def main() -> int:
         rp = Path(lab, "s2", "runs.jsonl")
         n_before = len(runs_file(lab, "s2"))
         with rp.open("a", encoding="utf-8") as f:
-            f.write('{"run_id": "R9", "step": "s001"')      # 半写坏行
+            f.write('{"run_id": "该轮", "step": "s001"')      # 半写坏行
         rc, out = run(lab, "run-show", "s2", "s001")
         check("★ 坏行不炸（rc=0）", rc == 0, f"rc={rc}")
         check("★ 好记录仍读得出", "ffuf" in out, out[:300])

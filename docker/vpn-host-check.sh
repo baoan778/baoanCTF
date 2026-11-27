@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# vpn-host-check.sh —— Q18=A（VPN 归宿主）落地前的「能不能这么干」体检
+# vpn-host-check.sh —— 既定决策（VPN 归宿主）落地前的「能不能这么干」体检
 #
 # 用法（在 WSL 里跑，不是容器里）：
 #   wsl.exe -d MyLinux -e bash -lc 'cd /mnt/d/baoan && bash docker/vpn-host-check.sh'

@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""R10 P0-A（缺陷 53）：bench 指标的唯一出口 —— 统一口径。
+"""该轮 该轮修复：bench 指标的唯一出口 —— 统一口径。
 
 为什么必须存在：历史报告同时出现过三个"总耗时"，且互不可比：
   A. 账本 total_sec 累加 = 22989 s  -> 那是「槽位·秒」的积分，不是时长
   B. 调用级耗时求和      = 25921 s  -> 含并发重叠，与 A 不可比
   C. 墙钟                = 11567 s  -> 唯一正确的"到底跑了多久"
 再加一个坑：会话文件名里的时间戳是 UTC，而文件 mtime 是本地 +08:00，
-直接相减会得出 11.21h / parallelism 0.57x 的错误结论（R10 已踩过一次）。
+直接相减会得出 11.21h / parallelism 0.57x 的错误结论（该轮 已踩过一次）。
 
 本模块的规矩：
   1) 任何"时长"都标注口径名，不写裸数字；
@@ -111,7 +111,7 @@ def collect(solve_dir: str, only=None) -> dict:
     """扫 solve_dir 下所有会话，算出带口径标注的指标包。
 
     only: 可选的**显式会话路径列表**。给了就只统计这些文件。
-    为什么需要它（R12）：基线数字（106 会话 / 11567s / 1.99x）是
+    为什么需要它（该轮）：基线数字（106 会话 / 11567s / 1.99x）是
     「2026-11-20 那次基准跑」的**历史事实**；一旦目录里多了任何一次新跑，
     对**活目录**断言这些数字必然失败。测试应当锁定历史时间窗，
     而不是逼着常数跟着目录漂移 —— 那是测试写错了，不是代码坏了。
@@ -135,7 +135,7 @@ def collect(solve_dir: str, only=None) -> dict:
             mt = datetime.datetime.fromtimestamp(os.path.getmtime(path), LOCAL_TZ)
         except OSError:
             continue
-        # ★ R12 修正（实测踩到）：mtime 会被"后续追加写"改掉。
+        # ★ 该轮 修正（实测踩到）：mtime 会被"后续追加写"改掉。
         #   昨天试点跑往 11-20 的老会话里**追加**了内容，mtime 就跳到 11-22，
         #   于是 11567s 的墙钟被算成 200373s（虚增 17 倍）。
         #   墙钟的语义是"这次会话跑了多久"，上限只能到会话**开始后**的合理区间；
@@ -233,7 +233,7 @@ def render_text(m: dict) -> str:
     if not m.get("ok"):
         return "bench_metrics: " + str(m.get("error"))
     lines = [
-        "bench_metrics (R10 P0-A, unified accounting)",
+        "bench_metrics (该轮 该轮修复, unified accounting)",
         "  sessions            : " + str(m["session_count"]),
         "  wall clock          : " + str(m["wall_clock_s"]) + " s = " + str(m["wall_clock_h"]) + " h   [CORRECT denominator]",
         "  slot seconds        : " + str(m["slot_seconds"]) + " s   (" + str(m["slot_seconds_note"]) + ")",

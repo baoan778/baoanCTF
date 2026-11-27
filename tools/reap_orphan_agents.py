@@ -10,7 +10,7 @@
   · 无头（cmdline 里有 -p / --print）—— WebUI 常驻 pi 豁免；
   · 默认只看 ppid == 1（已被 init 收养 = 父进程已死）。
 
-★★ 2026-11-20 P0-1（历史复盘 R1-01，实测白烧 $0.515/13min）：
+★★ 2026-11-20 该轮修复（实战复盘，实测白烧 $0.515/13min）：
   停机时只"按脚本名"kill 了 parallel_solver 与 sdkshard，而 sdkshard 用
   `start_new_session=True` 拉起 pi —— pi 在**独立进程组**里，父亲一死就变孤儿继续跑。
   实测停机后 13 分钟内 3 个 pi 又发了 37 次请求 / $0.515，全部零产出
@@ -39,7 +39,7 @@ import sys
 os.environ.setdefault("MSYS_NO_PATHCONV", "1")
 os.environ.setdefault("MSYS2_ARG_CONV_EXCL", "*")
 
-# ★ 2026-11-20（优化 15）：D 态（不可中断睡眠）进程读 cmdline 会**永久阻塞**。
+# ★ 2026-11-20：D 态（不可中断睡眠）进程读 cmdline 会**永久阻塞**。
 #   本脚本在巡检里被循环调用，一个卡住的 pid 就能让整套清扫挂死，
 #   连带 supervise 巡检卡死 = 守护等于不存在。先读 /proc/<pid>/stat 的 state 挡掉。
 _UNREADABLE_STATES = ("Z", "D", "X", "x")

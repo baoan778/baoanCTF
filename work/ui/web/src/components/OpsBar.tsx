@@ -3,7 +3,7 @@ import { api } from "../api";
 import { usePoll } from "../lib/poll";
 
 /**
- * 作战条（W-P0-1）—— 信条 P1：时间是一等公民。
+ * 作战条—— 信条 P1：时间是一等公民。
  *
  * 数据来自 /api/ops（服务端聚合 fgs deadline / cost / next / workers）。
  * ★ 每一路都可能失败（没黑板 / 没 token / fgs 超时），这里**一律显示「—」或原因**，
@@ -107,14 +107,14 @@ export default function OpsBar() {
 
       <span className="ops-sep" />
 
-      {/* ③ 工作单元（W-P1-1）：派出去的活现在到底有没有人在跑 */}
+      {/* ③ 工作单元：派出去的活现在到底有没有人在跑 */}
       <span className="ops" title={"黑板活路 " + lanes + " · 子代理 " + subs + "（在跑才计）"}>
         <em>在跑</em>
         <b className="mono">{unitsKnown ? running : "—"}</b>
         {running > 0 ? <span className="live-dot" /> : null}
       </span>
 
-      {/* ③b 剩余可交次数（W-P1-1）：错交是硬扣分，这个数直接决定「敢不敢交」。
+      {/* ③b 剩余可交次数：错交是硬扣分，这个数直接决定「敢不敢交」。
           平台拿不到就显示 ? 并给原因 —— 绝不写 0（0 会让人以为一次都不能交了）。 */}
       <span className="ops" title={fl?.known ? "平台题单里还能提交的次数（错交扣分，交之前看它）" : ("不知道：" + (fl?.reason || "平台无响应"))}>
         <em>可交</em>

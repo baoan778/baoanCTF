@@ -1,4 +1,4 @@
 #!/bin/sh
-# 2026-11-20 优化 #20：flask-unsign 装在 /home/ctf/.local/bin（不在 PATH），
+# 2026-11-20 某轮优化：flask-unsign 装在 /home/ctf/.local/bin（不在 PATH），
 # 模型 command not found 后反复 pip install 白烧 54s。这里转到模块入口。
 exec python3 -m flask_unsign "$@"

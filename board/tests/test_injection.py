@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""S10/S11 回归：prompt 注入防护（控制符净化 + 单遍模板替换）。
+"""该阶段 回归：prompt 注入防护（控制符净化 + 单遍模板替换）。
 
     python3 board/tests/test_injection.py
 
@@ -160,7 +160,7 @@ def main() -> int:
         print("失败项：" + "、".join(failed[:10]))
         return 1
     print(f"通过 {len(passed)} / 失败 0")
-    print("✓ 注入防护（S10/S11）：全部通过")
+    print("✓ 注入防护：全部通过")
     return 0
 
 

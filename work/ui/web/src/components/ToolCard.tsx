@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import HttpBlock from "./HttpBlock";
 
 /**
- * 工具事件卡（W-P1-2）
+ * 工具事件卡
  *
  * 为什么要有：AGENTS.md 的 flag 纪律写着 ——「值拆自二进制/内存的，把**取到它的那条命令
  * 与原始输出**一起给，方便别人复现」。之前对话页只渲染 text_delta，工具调用整条被丢掉，

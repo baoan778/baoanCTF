@@ -241,7 +241,7 @@ def quarantine_poisoned(sessdir: Path) -> int:
 
 
 def session_no_tools(path: Path) -> bool:
-    """★★ 2026-11-19 P0-2：这条会话是不是「天生没工具」的（第一段 system 就没有 bash）。
+    """★★ 2026-11-19 该轮修复：这条会话是不是「天生没工具」的（第一段 system 就没有 bash）。
 
     与 toolsRemoved 污染是**两个不同来源**，必须都挡住：
       · 来源 A：`--no-tools` 续跑到已有目录 → 老会话追加 `toolsRemoved`（session_poisoned 管）。
@@ -369,7 +369,7 @@ def run_wrapup(sessdir: Path, outpath: Path, secs: int, model: str) -> str:
 #        （同源风险还有一个变体：xben-066 的 web_search 结果里出现过 `FLAG{b5b47599…}`，
 #          那是 sha256("XBEN-043-24") —— **别的题**的参考哈希，本轮没被提交只是因为它那轮
 #          候选数为 0。这条不在本判据覆盖范围内：运行时无从知道"这串哈希是哪道题的"，
-#          硬扩成"任意 64 位 hex 都丢"会误杀真 flag。取舍见 R2-03。）
+#          硬扩成"任意 64 位 hex 都丢"会误杀真 flag。取舍见 某轮复盘。）
 #     ② 大小写变体：xben-025 同一轮同时出现 flag{e32d5e7d-…}（✅ 300 分）与 FLAG{E32D5E7D-…}，
 #        因为去重是**大小写敏感**的，后半截又白提了一次 → ❌。
 #   这里补两道纯字符串判定（都不需要网络、不需要平台）：
@@ -549,7 +549,7 @@ def session_context_tokens(sessdir: Path) -> int:
     """最新会话「最后一次 LLM 调用」的上下文规模（input + cacheRead）。
 
     为什么量这个（R5-A，2026-11-21）：重试时续跑会把上一轮的**全部历史**
-    重新带进每一次调用。138 run 里最贵的几道题（092/066/088/056/081）最后上下文
+    重新带进每一次调用。历史会话 里最贵的几道题（092/066/088/056/081）最后上下文
     长到 98k~159k tokens，而它们重试轮占了全场 70% 成本。上下文超过阈值时，
     新开会话 + 注入 facts/卡点摘要，比继续背着 15 万 token 跑便宜一个数量级。
     """
@@ -676,12 +676,12 @@ def last_attempt_hint(sessdir: Path, max_chars: int = 700) -> str:
 def extract_facts(out: str, max_lines: int = 25) -> list[str]:
     """从本轮输出里抽「已确认事实」：找到的路径、凭据、报错、注入点。
 
-    ★ 2026-11-14 P0-2：容器地址会轮换，续跑会话里的旧 IP 全部作废，
+    ★ 2026-11-14 该轮修复：容器地址会轮换，续跑会话里的旧 IP 全部作废，
       但**结论**（哪些路径存在、哪个参数可注入、拿到什么凭据）仍然有效。
       把这些写进 facts.md，下轮直接注入提示词，比续跑更抗地址变更。
     """
     # ★ 2026-11-14 实测修：原来直接对 out 做行正则 —— 但 out 是 **pi 的 jsonl 原样**
-    #   （每行 {"message":...}），261 个 block 回放抽出 0 条，等于 P0-2 完全无效。
+    #   （每行 {"message":...}），261 个 block 回放抽出 0 条，等于 该轮修复 完全无效。
     #   正确做法：先解析 jsonl，只取 toolResult 的正文文本，再对正文做正则。
     text = out or ""
     bodies: list[str] = []
@@ -779,7 +779,7 @@ _FLAG_ONLY_RE = re.compile(r"^[*\-`\s]*FOUND_FLAG\s*[=:：]\s*\S+\s*[*`]*$")
 def extract_wrapup_facts(out: str, max_lines: int = 200) -> list[str]:
     """从**收尾轮**那段输出里抽事实（rc=124 专用，extract_facts 抽不到它）。
 
-    格式事实（138 run 回放，见 历史复盘 R3-03）：
+    格式事实（历史会话 回放，见 实战复盘）：
       · 收尾轮结论被夹在 "===== WRAPUP（…）=====" 与后续 pi jsonl 转储之间；
         转储一出现就必须停（那是会话原文，不是本轮结论）。
       · 段落标题 = "1) 已确认的事实" / "**2) 试过并证伪**" / "3、…" 三种写法；
@@ -987,7 +987,7 @@ def load_facts(sessdir: Path, max_chars: int = 1200) -> str:
 
 
 
-# ★★ 2026-11-20 优化 12：砍掉解题用不到的扩展工具（system prompt 第二大固定成本）
+# ★★ 2026-11-20 某轮优化：砍掉解题用不到的扩展工具（system prompt 第二大固定成本）
 #
 # 实测（tools/_an_toolsz.py + _an_tools2.py，容器内真跑）：解题会话的 system 行 38.5KB 里，
 #   toolsAdded（工具 JSON schema）占 33.7KB = 87%，其中：
@@ -1011,9 +1011,9 @@ def load_facts(sessdir: Path, max_chars: int = 1200) -> str:
 #   而 subagent/bg_wait/source_check 是解题链路上结构性用不到的（单 shard 单线程解题）。
 #
 # 收益估算：每轮省 24.6KB，按实测斜率 +4.8s/100KB ≈ 1.18s/轮，
-#   上轮 run 约 1100 轮生成 → 约 1300s（≈ 总时长 12%），且与优化 06 叠加生效。
+#   上轮 run 约 1100 轮生成 → 约 1300s（≈ 总时长 12%），且与某轮优化 叠加生效。
 # 逃生门：PI_SOLVE_EXCLUDE=0 关闭本优化；PI_SOLVE_EXCLUDE=<逗号列表> 自定义。
-# ★ R5-C（2026-11-21）：加 edit / triage —— 138 run 的 2350 次工具调用里这两个各 0 次，
+# ★ R5-C（2026-11-21）：加 edit / triage —— 历史会话 的 2350 次工具调用里这两个各 0 次，
 #   但它们的 schema 每轮都要随 system prompt 重发（~5.9M 承载字符 / 277.8M = 2%）。
 #   edit 可由 bash（python/sed）替代；triage 是“附件入场”工具，跑分题面没有附件。
 SOLVER_EXCLUDE_DEFAULT = "subagent,subagent_supervisor,bg_wait,source_check,edit,triage"
@@ -1138,7 +1138,7 @@ def build_prompt(code: str, addrs: list[str], flag_count: int, budget: int,
     recon_cmd = " ; ".join(
         f"bash /opt/pi-ctf/tools/fast-recon.sh {a.strip()}" for a in (addrs or [])
     ) or "bash /opt/pi-ctf/tools/fast-recon.sh <地址>"
-    # ★ 2026-11-14 P0-1：容器地址会轮换（实测 10.0.170.144:8000 两次 curl 之间变 000）。
+    # ★ 2026-11-14 该轮修复：容器地址会轮换（实测 10.0.170.144:8000 两次 curl 之间变 000）。
     #   续跑会话里记的旧 IP 会失效，agent 会对着死地址打。必须显式覆盖。
     addr_warn = ""
     if attempt_no >= 2 and addr_changed:
@@ -1247,7 +1247,7 @@ def build_prompt(code: str, addrs: list[str], flag_count: int, budget: int,
 # R4-A（2026-11-21）停机落盘：被 supervise --stop 的 SIGTERM 打死时，
 # **别把这一轮已经拿到的东西一起带走**。
 #
-# 实测事故（R4-01 §2.6）：2026-11-20 17:11 停机后，6 个轮段（$0.7945 / 4,139s /
+# 实测事故（某轮复盘 §2.6）：2026-11-20 17:11 停机后，6 个轮段（$0.7945 / 4,139s /
 # 占全场成本 15.5%）在 log/shard-*.log 里**一行记录都没有**，其中 101 与 093
 # 其实已经解出（外层提交过，日志里却没有收尾行）。根因不是「没写代码」，
 # 而是写收尾行的代码全在 solve_one 尾部的正常路径上，而 SIGTERM 的默认动作是
@@ -1541,7 +1541,7 @@ def solve_one(client, code: str, budget: int, retry_left: int = 2,
                 sysfile = write_solver_system(sessdir, _scratch)
                 args_pi += ["-p", prompt, "--provider", "deepseek", "--model", model,
                             "--session-dir", str(sessdir)]
-                # ★★ 2026-11-19 优化 06：system prompt 瘦身（实测 52.4KB → 35.9KB，省 16.5KB/轮）。
+                # ★★ 2026-11-19 某轮优化：system prompt 瘦身（实测 52.4KB → 35.9KB，省 16.5KB/轮）。
                 #   实测依据（tools/_ab_sysflag.py 五组 A/B）：默认注入 AGENTS.md 全文 10.3KB
                 #   + 全部 17 个 skill 清单 7.2KB，而 1152 次工具调用里 fgs 只用 1 次、
                 #   SKILL.md 读了 0 次 —— 这笔固定成本每轮重发、几乎零回报。
@@ -1551,13 +1551,13 @@ def solve_one(client, code: str, budget: int, retry_left: int = 2,
                 #   所以关掉 context-files 不会丢约束。可用 PI_SOLVE_SLIM=0 关掉本优化做对照。
                 if os.environ.get("PI_SOLVE_SLIM", "1") != "0":
                     args_pi += ["--no-context-files", "--no-skills"]
-                # ★★ 2026-11-20 优化 12：砍掉解题用不到的扩展工具（见 SOLVER_EXCLUDE_DEFAULT 注释）。
-                #   与优化 06（--no-context-files --no-skills）叠加：system 行 38.5KB → 13.8KB。
+                # ★★ 2026-11-20 某轮优化：砍掉解题用不到的扩展工具（见 SOLVER_EXCLUDE_DEFAULT 注释）。
+                #   与某轮优化（--no-context-files --no-skills）叠加：system 行 38.5KB → 13.8KB。
                 #   判据已过 A/B + 功能验证（bash 真的要跑得起来，不只是清单里有名字）。
                 _ex = solver_exclude()
                 if _ex:
                     args_pi += ["--exclude-tools", _ex]
-                # ★ 2026-11-20 优化 14：thinking 档位显式化。
+                # ★ 2026-11-20 某轮优化：thinking 档位显式化。
                 #   pi 的默认档是 high（实测会话里首条就是 thinking_level_change high），
                 #   而解题每轮要生成 12 次（1071 轮/88 题），思考 token 直接计进生成耗时
                 #   （占 64.9% 的第一大成本）。这里给个可配的旋钮：不设即沿用 pi 默认，
@@ -1683,7 +1683,7 @@ def solve_one(client, code: str, budget: int, retry_left: int = 2,
         # ★ R2-C：把题号传进去，才能认出「题号的 sha256」这种公开参考值。
         cands = extract_flags(out, code)
         log(f"{code}: agent rc={rc}，候选 {len(cands)} 个")
-        # ★ P0-2：把本轮「已确认事实」落进 facts.md —— 地址会轮换，但结论仍有效。
+        # ★ 该轮修复：把本轮「已确认事实」落进 facts.md —— 地址会轮换，但结论仍有效。
         #   下轮注入提示词，比续跑更抗地址变更（续跑里的旧 IP 全是废的）。
         _facts: list[str] = []
         try:
@@ -1811,7 +1811,7 @@ def solve_one(client, code: str, budget: int, retry_left: int = 2,
                 Ledger().record_elapsed(code, time.time() - t_start)
             except Exception:  # noqa: BLE001
                 pass
-        # ★ 2026-11-14 P2-3：会话滚动清理，每题只留最近 2 份（实测峰值 31M/197 文件）。
+        # ★ 2026-11-14 该轮修复：会话滚动清理，每题只留最近 2 份（实测峰值 31M/197 文件）。
         try:
             _sessions = sorted(sessdir.glob("*.jsonl"), key=lambda f: f.stat().st_mtime)
             for _old in _sessions[:-2]:

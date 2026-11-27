@@ -724,7 +724,7 @@ def _is_root() -> bool:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ★★ R11（2026-11-22）血的教训：**绝不给平台下发的 ovpn 加任何覆盖参数**
+# ★★ 该轮（2026-11-22）血的教训：**绝不给平台下发的 ovpn 加任何覆盖参数**
 #
 #   现象：加了 --tun-mtu 1400 后报
 #     AUTH_FAILED,Option inconsistency, please check cipher, auth, comp-lzo options
@@ -741,7 +741,7 @@ def _is_root() -> bool:
 #   --cipher AES-256-CBC、--push-peer-info、--allow-compression。
 #
 #   => vpn up 只用 --config + --auth-nocache。见 tools/tsec-vpn-up.sh。
-#   证据：历史复盘 R11-01-复盘报告.md §2（含完整 OCC 双串对比）
+#   证据：实战复盘.md §2（含完整 OCC 双串对比）
 # ═══════════════════════════════════════════════════════════════════════════
 
 def _vpn_dir() -> str:
@@ -1094,7 +1094,7 @@ def cmd_vpn(args):
             _sudo(["cp", tmp, VPN_CONF])
             os.unlink(tmp)
             _sudo(["chmod", "600", VPN_CONF])
-        # ★ 2026-11-14 修 P2-7（实测两次踩到）：原来是「无条件先 pkill 再起」。
+        # ★ 2026-11-14 修 该轮修复（实测两次踩到）：原来是「无条件先 pkill 再起」。
         #   后果：① 两路并发 `vpn up` 互相杀掉对方刚建好的隧道；
         #        ② 新隧道起不来时（证书/网关抖动），把原本**好着**的隧道也杀了 →
         #          从「能用」变成「全断」，而调用方只看到一句握手失败。
@@ -1223,7 +1223,7 @@ def cmd_vpn(args):
         print("起隧道缺     :")
         for b in blockers:
             print("  - " + b)
-        print("  （按 Q18=A VPN 归宿主；容器侧 list/submit/close 不需要隧道）")
+        print("  （按 既定决策 VPN 归宿主；容器侧 list/submit/close 不需要隧道）")
     return 0 if (alive and ifs) else 1
 
 

@@ -20,7 +20,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
-// 安全边界（2026-11-18 操作者定案：**口令闸门整条通路已删除**，不是关闭）
+// 安全边界（2026-11-18 用户定案：**口令闸门整条通路已删除**，不是关闭）
 //
 // 删掉的是「每次开界面先查口令再输」那一跳：开关键量、口令文件、两个鉴权端点、
 // 前端口令框全没了，代码里不再有可以打开的开关 —— 少一个赛时故障点，也少一份
@@ -1633,7 +1633,7 @@ function slimEvent(rec) {
     }
     return out;
   }
-  // ★ 2026-11-05（W-P1-2）：工具事件以前整条丢给前端，前端也不消费 —— 于是
+  // ★ 2026-11-05：工具事件以前整条丢给前端，前端也不消费 —— 于是
   //   「这条 flag 是哪条命令打出来的」在界面上毫无痕迹，复现链断在第一环。
   //   现在按**配对所需的最小字段**瘦身后放行 start/end（update 仍然只留 touch，防大输出撑爆 SSE）：
   //     start: {toolCallId, toolName, args}          ← args 用来生成「命令」一行
@@ -1708,7 +1708,7 @@ pi.subscribe(broadcast);
 
 // 开第一条会话进程：优先回到"上次看的会话"（存在 work/ui/.last-session.json），
 // 找不到/文件没了就开新会话 —— 服务重启后回到原来那条，不用手动点回去。
-// ★ 2026-11-14 修 P2-9（实测）：原来落在 work/ui/ —— 而容器只挂载了 work/ui 下的
+// ★ 2026-11-14 修 该轮修复（实测）：原来落在 work/ui/ —— 而容器只挂载了 work/ui 下的
 //   server.mjs 与 web/* 单文件，整个目录**不是**挂载点 → 容器一重建，指针就没了，
 //   只能退到「最新会话」= 最新探活。改落到 agent 卷（容器外持久）。
 const LAST_SESSION_FILE = process.env.PI_LAB_LAST_SESSION_FILE
@@ -1720,8 +1720,8 @@ async function rememberSession(sessionPath) {
   try { await stat(sessionPath); } catch { return; }
   writeFile(LAST_SESSION_FILE, JSON.stringify({ sessionPath, at: Date.now() }), "utf8").catch(() => {});
 }
-// ★ 2026-11-14 修 P2-9（实测）：探活会话（"reply OK" 这类）会被当成「最新会话」，
-//   UI 重启就恢复成一个只剩 reply OK 的空壳，操作者真正的会话反而接不上。
+// ★ 2026-11-14 修 该轮修复（实测）：探活会话（"reply OK" 这类）会被当成「最新会话」，
+//   UI 重启就恢复成一个只剩 reply OK 的空壳，用户真正的会话反而接不上。
 //   判据用**用户消息内容**，不用文件名/时间（探活随时可能再写一条）：
 //   取每条会话的第一条 user 文本，若它短于 24 字且形如 OK/reply/ok/你好/在吗，判为探活。
 function looksLikeProbeSession(fileLines) {
@@ -2294,7 +2294,7 @@ async function sessionHistory(file, limit = 200) {
 // ---------------------------------------------------------------- 会话写操作（重命名 / 删除）
 // 格式对齐 pi 自己的 SessionManager.appendSessionInfo：追加一条 session_info（取最后一条为准）。
 // 删除**不做 unlink**（借 pi-web 的能力但把风险降低）：移到 <sessionDir>/.trash/，可反悔；
-// 真删留给操作者手动，接口层面只提供软删（不提供 hard 参数，免得被前端误调）。
+// 真删留给用户手动，接口层面只提供软删（不提供 hard 参数，免得被前端误调）。
 function assertSessionPath(file) {
   // ★ 先 resolve 再判：直接 startsWith/includes 会被「/tmp/x/.pi/agent/sessions/../../etc/…」
   //   这种带 .. 的路径绕过去（子串确实在，但归一化后早就逃出沙箱了）——重命名/删除
@@ -2512,7 +2512,7 @@ async function flagReport(limit = 300) {
   return data;
 }
 
-// ---------------------------------------------------------------- flag 三态账本（W-P0-2）
+// ---------------------------------------------------------------- flag 三态账本
 // ★ 2026-11-05：flag-watch.jsonl 只回答「这东西在输出里出现过」，它**根本不知道平台收不收**。
 //   抢分时最危险的不是没找到，而是「攒了一堆候选、不知道哪个真算分」——
 //   所以这里读 fgs 的 append-only 账本（board/projects/<pid>/flag-ledger.jsonl），
@@ -2576,7 +2576,7 @@ async function flagLedger(wantPid) {
   return { pid, flags, counts };
 }
 
-// ---------------------------------------------------------------- 「下一刀」候选（W-P0-3）
+// ---------------------------------------------------------------- 「下一刀」候选
 // ★ 2026-11-05：对话页空白态难看的根子是「没有决策可做」。这里把黑板上**当前可动的三刀**
 //   摊成数据：优先证据最强、变现最快。每条带 why 与证据强度，界面不猜、不编。
 //   数据全部来自已有的机器产物（fgs next / graph.json / flag 账本），不新增任何写路径。
@@ -3077,9 +3077,8 @@ async function runFgs(cmd, pid) {
   });
 }
 
-// ---------------------------------------------------------------- 作战台聚合（W-P0-1，只读）
-// 设计依据（docs/学习清单-W系列-WebUI设计.md §1.2）：
-//   信条 P1「时间是一等公民」、P3「一屏一个决策」。
+// ---------------------------------------------------------------- 作战台聚合（该轮修复，只读）
+// 设计信条：P1「时间是一等公民」、P3「一屏一个决策」。
 // 纪律：
 //   · **只调只读子命令**（deadline / cost / next），与 FGS_ALLOW 同源，绝不经过 shell；
 //   · 每一路**独立 try**，一路失败只让那一路变 null —— 界面必须能显示「不知道」，
@@ -3136,7 +3135,7 @@ async function fgsJson(cmd, pid, timeoutMs = 25000) {
 }
 
 /** 作战台快照：一次拿齐「还有多久 / 值多少钱 / 下一步打哪」三件事 */
-// 知识库检索（W-P2-1）。赛中「这题该翻哪份资料」不该靠人回想。
+// 知识库检索。赛中「这题该翻哪份资料」不该靠人回想。
 // 冷启动实测 1.8s（首次），所以按 (词, top) 缓存 10 分钟；同词重复点不重复跑进程。
 const kbCache = new Map();
 async function kbSearch(q, top) {
@@ -3182,7 +3181,7 @@ function runKb(q, top) {
   });
 }
 
-// 剩余可交次数（W-P1-1）。60s 缓存 + 12s 超时：这是**平台**依赖，
+// 剩余可交次数。60s 缓存 + 12s 超时：这是**平台**依赖，
 // 断网/无 token 时必须快速失败并如实说「不知道」，绝不阻塞作战条。
 let flagsLeftCache = { at: 0, data: null };
 
@@ -3251,7 +3250,7 @@ async function opsSnapshot(wantPid) {
     confirmed: cost.data?.confirmed ?? null,
   } : null;
 
-  // 工作单元（W-P1-1）：派出去的每一路都该在作战台上看得见 —— 否则「跑了几路、谁在干活」
+  // 工作单元：派出去的每一路都该在作战台上看得见 —— 否则「跑了几路、谁在干活」
   // 只能靠去子代理页翻，赛中根本没那个时间。
   let units = null;
   try {
@@ -3268,7 +3267,7 @@ async function opsSnapshot(wantPid) {
   try { const f = await flagReport(50); flags = { total: f.total, unique: (f.unique || []).length, top: (f.unique || []).slice(0, 5) }; }
   catch (e) { flags = { error: e.message }; }
 
-  // ★ W-P1-1：剩余可交次数。以前故意不接，理由是「没 token 就常驻红字」——
+  // ★ 该轮修复：剩余可交次数。以前故意不接，理由是「没 token 就常驻红字」——
   //   但那是显示问题，不是数据问题。实测 fgs flags-left 失败时**退出码 0**、stdout 打一行 ✗，
   //   完全可以解析成「不知道」而不是「0」。显示「?（缺 token）」即可，既不撒谎也不吓人。
   const leftCount = await flagsLeftCached();
@@ -3444,7 +3443,7 @@ async function readJsonBody(req, max = 2 * 1024 * 1024) {
   try { return JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}"); } catch { return {}; }
 }
 
-// ---------------------------------------------------------------- 同源校验（W-P0-5）
+// ---------------------------------------------------------------- 同源校验
 // ★ 2026-11-05：写接口原来对「谁发的」完全不设防。工作台绑回 127.0.0.1 之后，
 //   仍有 CSRF 面 —— 你在浏览器里开着这个台子，随便一个恶意网页都能 POST 过来
 //   （同源策略只挡「读响应」，不挡「发请求」）。上传与智能体保存是最值得先堵的两个。
@@ -3478,7 +3477,7 @@ function sameOrigin(req) {
   return true;
 }
 
-// ---------------------------------------------------------------- 原始工具输出留痕（W-P0-2 补完）
+// ---------------------------------------------------------------- 原始工具输出留痕（该轮修复 补完）
 // ★ 2026-11-05：三态徽标原来只能展开**账本回执**，账本里根本没有「取到它的那条命令与原始输出」。
 //   AGENTS.md §4 写得很直白：「值拆自二进制/内存的，把取到它的那条命令与原始输出一起给，方便复现」。
 //   所以 flag-watch 命中时顺手把上下文片段落在 log/flag-ctx/<session>/<sha1>.txt（只落片段，不落全量输出）。
@@ -3766,13 +3765,13 @@ const server = createServer(async (req, res) => {
 
     if (p === "/api/flags") return json(res, await flagReport(Number(url.searchParams.get("limit") || 300)));
 
-    // 作战台聚合（W-P0-1）：只读，三路各自独立失败，界面据 ok 显示「不知道」而不是 0
+    // 作战台聚合：只读，三路各自独立失败，界面据 ok 显示「不知道」而不是 0
     if (p === "/api/ops") {
       try { return json(res, await opsSnapshot(url.searchParams.get("pid") || "")); }
       catch (e) { return json(res, { error: e.message }, 500); }
     }
 
-    // 知识库检索（W-P2-1）：只读。?q=词&top=3
+    // 知识库检索：只读。?q=词&top=3
     if (p === "/api/kb") {
       const q = String(url.searchParams.get("q") || "").trim();
       const top = Math.min(10, Math.max(1, Number(url.searchParams.get("top") || 3) || 3));
@@ -3781,13 +3780,13 @@ const server = createServer(async (req, res) => {
       try { return json(res, await kbSearch(q, top)); } catch (e) { return json(res, { error: String(e?.message || e) }, 500); }
     }
 
-    // 原始工具输出片段（W-P0-2 补完）：只读，按 <session>/<sha1> 取回命中处上下文
+    // 原始工具输出片段（该轮修复 补完）：只读，按 <session>/<sha1> 取回命中处上下文
     if (p === "/api/flags/raw") {
       try { return json(res, await flagRaw({ sid: url.searchParams.get("sid"), sha: url.searchParams.get("sha") })); }
       catch (e) { return json(res, { error: e.message }, 500); }
     }
 
-    // flag 三态账本（W-P0-2）：只读。accepted/pending/refuted 三态 + 平台原始回执
+    // flag 三态账本：只读。accepted/pending/refuted 三态 + 平台原始回执
     if (p === "/api/flags/ledger") {
       try { return json(res, await flagLedger(url.searchParams.get("pid") || "")); }
       catch (e) { return json(res, { error: e.message }, 500); }
@@ -3803,7 +3802,7 @@ const server = createServer(async (req, res) => {
       catch (e) { return json(res, { error: e.message }, 500); }
     }
 
-    // 「下一刀」候选（W-P0-3）：只读。黑板上当前可动的三刀 + 证据强度
+    // 「下一刀」候选：只读。黑板上当前可动的三刀 + 证据强度
     if (p === "/api/moves") {
       try { return json(res, await moves(url.searchParams.get("pid") || "")); }
       catch (e) { return json(res, { error: e.message }, 500); }

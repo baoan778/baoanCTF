@@ -273,7 +273,7 @@ input:focus, textarea:focus, select:focus {
 .hint { color: var(--fg-faint); font-size: 11px; line-height: 1.5; }
 .section-title { font-size: 12px; color: var(--fg-dim); font-weight: 600; letter-spacing: .6px; text-transform: uppercase; margin: 0 0 8px; }
 
-/* ── 作战条（W-P0-1）────────────────────────────────────────
+/* ── 作战条────────────────────────────────────────
    常驻在顶栏下方。四项都是「会改变下一步动作」的数，
    按信条「不做仪表盘墙」≤4 项，且失败一律显示「—」不显示 0。 */
 .opsbar {
@@ -293,7 +293,7 @@ input:focus, textarea:focus, select:focus {
 .opsbar .ops .ell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 
-/* ── 「下一刀」卡（W-P0-3）：对话空白态的主屏 ─────────────────────────────
+/* ── 「下一刀」卡：对话空白态的主屏 ─────────────────────────────
    设计意图：空白态不是「等待」，是「决策」。所以这一屏的主视觉是可点的三刀，
    而不是一句「还没有对话」+ 1000px 死白。 */
 .emptychat { display: flex; flex-direction: column; gap: 14px; max-width: 760px; }
@@ -330,7 +330,7 @@ input:focus, textarea:focus, select:focus {
 .movecard .mwhy a { color: var(--accent); text-decoration: none; }
 .movecard .mwhy a:hover { text-decoration: underline; }
 
-/* ── flag 三态徽标（W-P0-2）：一眼分清「算分 / 待定 / 证伪」 ─────────────── */
+/* ── flag 三态徽标：一眼分清「算分 / 待定 / 证伪」 ─────────────── */
 .tribadge {
   flex: 0 0 auto; font-size: 10px; letter-spacing: .4px; padding: 2px 7px;
   border-radius: 999px; border: 1px solid var(--line); color: var(--fg-dim);
@@ -407,7 +407,7 @@ input:focus, textarea:focus, select:focus {
   .opsbar .ops.optional { display: none; }
 }
 
-/* ── 状态页三栏的渐次入场（W-P1-3 配套）────────────────────────────────
+/* ── 状态页三栏的渐次入场（该轮修复 配套）────────────────────────────────
    三栏同时出现会让眼睛不知道先看哪；10/20/30ms 的延时足够建立阅读顺序，
    又不至于让人觉得「界面在加载」。禁用动画偏好下自动关掉。 */
 .page .grid > .col:nth-child(1) { animation: colIn .18s ease-out both; }
@@ -423,7 +423,7 @@ input:focus, textarea:focus, select:focus {
 .card { padding: 12px 13px; }
 .card h3 { margin-bottom: 8px; }
 
-/* ── 黑板三栏（W-P1-3 / 2026-11-05）────────────────────────────────────────
+/* ── 黑板三栏（该轮修复 / 2026-11-05）────────────────────────────────────────
    左 300 清单 / 中 1fr 事实流 / 右 320 概况与日志。
    关键点：三栏各自滚动（min-height:0 + overflow:auto），
    否则中栏节点一多就把日志挤出屏幕，赛中翻不到「刚发生什么」。 */
@@ -482,7 +482,7 @@ input:focus, textarea:focus, select:focus {
 .logrow .op { color: var(--accent); font-size: 10.5px; flex: 0 0 auto; min-width: 84px; }
 .logrow .txt { color: var(--fg-dim); flex: 1; min-width: 0; }
 
-/* ── 工具事件卡（W-P1-2 / 2026-11-05）────────────────────────────────────
+/* ── 工具事件卡（该轮修复 / 2026-11-05）────────────────────────────────────
    默认折叠成一行：▸ bash  strings vuln | grep flag          120ms  完
    点开才看命令全文与输出尾部 4KB。理由：赛中屏幕稀缺，展开是主动行为；
    但「这条 flag 是哪条命令打出来的」必须能一眼找到（AGENTS.md §4 复现要求）。 */
@@ -542,7 +542,7 @@ input:focus, textarea:focus, select:focus {
 /* #41 定位回跳：被「定位调用」打中的那张卡必须一眼看出来是它（金色描边，不用动画免得抢注意力） */
 .toolcard.focus { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold-soft); }
 
-/* ── 知识库命中（W-P2-1）────────────────────────────────────────────────
+/* ── 知识库命中────────────────────────────────────────────────
    展开一刀时顺手给「同题经验在哪」：分类 / 标题 / 文件:行号。
    要的是指针不是正文 —— 赛中没时间读长文，需要的是「去哪看」。 */
 .kbhits { margin: 6px 0 2px; padding: 6px 8px; border-radius: var(--r-sm); background: var(--bg); border: 1px solid var(--line-soft); }
@@ -565,7 +565,7 @@ input:focus, textarea:focus, select:focus {
 .kv dt { color: var(--fg-faint); }
 .kv dd { font-variant-numeric: tabular-nums; }
 
-/* 空白态（W-P1-3 收尾）：给下一步动作，不给一句【暂无数据】 */
+/* 空白态（该轮修复 收尾）：给下一步动作，不给一句【暂无数据】 */
 .empty.kbhint { line-height: 1.7; }
 .empty.kbhint .hint { margin-top: 6px; font-family: var(--mono); font-size: 11.5px; }
 .empty.kbhint code { font-size: 11.5px; color: var(--accent); }

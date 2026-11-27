@@ -41,7 +41,7 @@ RESTARTS="$LOG_DIR/pi-restarts.jsonl"
 BUDGET_FILE=${PI_LAB_KEEPALIVE_BUDGET:-$LOG_DIR/keepalive-budget.json}
 BUDGET_WINDOW=${PI_LAB_KEEPALIVE_WINDOW:-1800}   # 窗口秒数：窗口外的旧计数不算数
 
-# ── P2-3：守护从「1 类」扩到「3 类」（2026-11-03）──────────────────────────
+# ── 该轮修复：守护从「1 类」扩到「3 类」（2026-11-03）──────────────────────────
 # 1) 进程死     → **已有**，行为原样不动（退避重启 + --continue + 冷却闸门）
 # 2) 卡死不产出 → ★ **只报警，绝不动作**（不 kill、不重启、不写脏状态）
 # 3) 额度墙     → 报警并**停手**（不无脑重启烧钱）
@@ -198,7 +198,7 @@ attempt=0
 restarts=$(budget_load)      # ★ 从盘上接着算，不从头开始
 [ "$restarts" -gt 0 ] && echo "[run-pi] 本窗口内已有 $restarts 次重启（从 $BUDGET_FILE 恢复）" >&2
 
-# ── P2-3 判据实现 ───────────────────────────────────────────────────────────
+# ── 该轮修复 判据实现 ───────────────────────────────────────────────────────────
 # 事件源：优先显式给，否则取会话目录里**最近改动**的那个文件（pi 会写会话 JSONL）
 _event_source() {
   if [ -n "$EVENT_FILE" ]; then printf '%s' "$EVENT_FILE"; return; fi

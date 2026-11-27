@@ -69,10 +69,10 @@ def main():
     ck("A2 首轮即便无资产也 high（80/99 首轮解出，不动它）",
        tf(0, False) == "high", tf(0, False))
     ck("A3 重试有资产 → high", tf(2, True) == "high", tf(2, True))
-    # ★ R11-02（2026-11-22）：A/B 实测否证了"降档省钱"——medium 既不快又贵 11.1%。
-    #   操作者要求默认维持 high 或极高，故默认改为 high。
+    # ★ 某轮复盘（2026-11-22）：A/B 实测否证了"降档省钱"——medium 既不快又贵 11.1%。
+    #   用户要求默认维持 high 或极高，故默认改为 high。
     #   这里断言的是**默认值**；显式设 PI_THINK_RETRY_COLD 仍可降档（见 test_thinking_custom.py）。
-    ck("A4 重试零资产 → high（R11-02 实测后改默认）", tf(2, False) == "high", tf(2, False))
+    ck("A4 重试零资产 → high（某轮复盘 实测后改默认）", tf(2, False) == "high", tf(2, False))
     ck("A5 首轮之后均为 high（默认不降档）", all(tf(t, False) == "high" for t in (1, 2, 5)))
 
     print("B) cost_cap")

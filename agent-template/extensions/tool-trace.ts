@@ -139,7 +139,7 @@ export default function toolTrace(pi) {
         session: process.env.PI_SESSION_ID || null,
       }, {});
 
-      // ★ 2026-11-17（学习清单 #47）：被裁掉的正文另存一份到 <留痕目录>/cmd-output/，
+      // ★ 2026-11-17：被裁掉的正文另存一份到 <留痕目录>/cmd-output/，
       //   摘要里只留指针（rec.spill）。这样上下文不被大输出撑爆，原文又没丢 ——
       //   与 ARTEX 的 sessionWorkDir/cmd-output 同构。写不进去就删指针，绝不影响留痕。
       const file = fileFor();

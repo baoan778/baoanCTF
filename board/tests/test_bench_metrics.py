@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_bench_metrics.py — R10 P0-A：bench 指标唯一出口（缺陷 53 的口径统一）
+"""test_bench_metrics.py — 该轮 该轮修复：bench 指标唯一出口（该缺陷的口径统一）
 
 为什么
 ------
 历史报告同时出现过三个"总耗时"且互不可比（22989 / 25921 / 11567），
 并且会话文件名里的时间戳是 **UTC**、文件 mtime 是 **本地 +08:00**；
-直接相减会得出 11.21h、parallelism 0.57x 的错误结论（R10 已实际踩过一次）。
+直接相减会得出 11.21h、parallelism 0.57x 的错误结论（该轮 已实际踩过一次）。
 
 判据
 ----
@@ -136,7 +136,7 @@ def main():
         ck("E1 ok=False 且有 error", m.get("ok") is False and bool(m.get("error")), m)
 
     print("F) 基线回归（真实 work/solve，限定基准跑时间窗）")
-    # ★ R12 修正：原来直接对**活目录**断言 106 会话 / 11567s，
+    # ★ 该轮 修正：原来直接对**活目录**断言 106 会话 / 11567s，
     #   一旦目录里多了任何一次新跑（本轮的试点 3 题就多出 1 个会话），
     #   断言必然失败 —— 那是**测试写错了**，不是代码坏了。
     #   基线是"2026-11-20 那次基准跑"的**历史事实**，所以只统计那个时间窗。
@@ -162,7 +162,7 @@ def main():
                100 <= (m.get("session_count") or 0) <= 115, m.get("session_count"))
             ck("F3 墙钟 11567s（±5s）", abs(m.get("wall_clock_s", 0) - 11567.0) <= 5.0,
                m.get("wall_clock_s"))
-            # ★ R12 修正：slot_seconds 来自 ledger 的 total_sec 累加，而 ledger 是**活文件**
+            # ★ 该轮 修正：slot_seconds 来自 ledger 的 total_sec 累加，而 ledger 是**活文件**
             #   —— 试点跑往老条目又记了 4.9s，硬编码 22989.1 就会红。
             #   基线要守的是"量级与口徑"，不是小数点：断言落在 [22900, 23100] 且
             #   与 22989.1 的偏差 < 0.5%，既防回退又能容忍后续少量真实记账。

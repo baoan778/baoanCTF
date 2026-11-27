@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """模型切换（Cyber-Model-1 ⟷ OpenCode Go DeepSeek）回归测试。
 
-对象（2026-10-10 新增，操作者要求「弄个模型切换功能」）：
+对象（2026-10-10 新增，用户要求「弄个模型切换功能」）：
   · `tools/bin/nccsec-token`  —— NCC 大模型中心的 Bearer 令牌（models.json 的 apiKey 靠它）
   · `tools/bin/mswitch`       —— shell 侧切换：改 .env 默认通道 + 留 /reload 标记
   · `.pi/agent/extensions/ocgo-switch.ts` —— 会话内 `/ms`、`/cyber`、`/ocgo` + marker 消费

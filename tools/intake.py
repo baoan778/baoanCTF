@@ -4,7 +4,7 @@
 
 为什么有它
 ----------
-每接一道题，操作者都得手打「题面 / 题型 / 附件 / 靶场地址」再发给 agent ——
+每接一道题，用户都得手打「题面 / 题型 / 附件 / 靶场地址」再发给 agent ——
 又慢又容易漏（漏了靶场地址我就得回头问）。这台小服务把录入变成**一张表**：
 浏览器里填完点「投递」，卡片落进 `work/inbox/`，pi 侧扩展 `ctf-inbox` 自动
 把结构化题面当成用户消息发给我 → 我按 AGENTS.md 的纪律直接开工（kickoff + skill + 派 lane）。
@@ -118,7 +118,7 @@ def build_message(card: dict) -> str:
         lines.append(f"平台/比赛: {card['platform']}")
     if card.get("target"):
         lines.append(f"靶场/目标: {card['target']}")
-    # 操作者 2026-10-10：flag 格式不填 = 让 agent 自己去找
+    # 用户 2026-10-10：flag 格式不填 = 让 agent 自己去找
     lines.append(f"flag 格式: {card.get('flagfmt') or '(未填 —— 自己从题面/平台/输出里推断，拿到后逐字确认)'}")
     if card.get("deadline"):
         lines.append(f"时限: {card['deadline']}")

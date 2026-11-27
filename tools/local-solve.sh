@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# local-solve.sh —— 本地模式「开跑」入口（P0-2）
+# local-solve.sh —— 本地模式「开跑」入口
 #
 # 为什么需要它（2026-11-14 实测）：docker/entrypoint.sh 只起 WebUI，**不自动解题**；
 #   compose up 之后容器 healthy、tsec 也能 list，但没有任何 pi 会话在跑题 ——

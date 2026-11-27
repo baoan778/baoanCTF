@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""procscan.py —— 唯一的「进程识别」实现（优化 13）。
+"""procscan.py —— 唯一的「进程识别」实现。
 
 ## 为什么要有这个文件
 

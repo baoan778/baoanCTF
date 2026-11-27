@@ -50,7 +50,7 @@ except Exception:
 LAB = os.environ.get("PI_LAB_ROOT", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 AGENT = os.path.join(LAB, ".pi", "agent")
 EXT_DIR = os.path.join(AGENT, "extensions")
-GOD = os.path.join(EXT_DIR, "deepseek-flash-godmode.ts")   # 操作者自己的那套，算基线
+GOD = os.path.join(EXT_DIR, "deepseek-flash-godmode.ts")   # 用户自己的那套，算基线
 PROMPT = "Reply with exactly: PING_OK"
 
 

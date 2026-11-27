@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api, type Json } from "../api";
 import { usePoll } from "../lib/poll";
 
-// #33 分角色监督：一个子代理在跑的时候，操作者最想一眼看到的是「哪一路在烧钱、哪一路没产出」。
+// #33 分角色监督：一个子代理在跑的时候，用户最想一眼看到的是「哪一路在烧钱、哪一路没产出」。
 // 后端 /api/subagents 早就把 role（status.json 的 agent / events.jsonl 的 agentName）、
 // tokens、mission（挂在哪条线上）都给了，这里只是把它们**分组成可扫的块**，而不是一堆平铺行。
 type Mission = { missionId?: string; summary?: string; status?: string; ownerSessionId?: string } | null;

@@ -34,7 +34,7 @@ RUN sed -i 's|http://archive.ubuntu.com|https://mirrors.tuna.tsinghua.edu.cn|g; 
 #    vpn：      openvpn iproute2 sudo
 #               ★ 2026-11-04：容器里原来一个都没有 → `tsec vpn` 连 status 都崩。
 #               现在装上，隧道在容器内起时只剩「devices + NET_ADMIN」这一个前提
-#               （compose.yaml 里有注释掉的两行，需要时打开）。默认仍按 Q18=A 归宿主。
+#               （compose.yaml 里有注释掉的两行，需要时打开）。默认仍按 既定决策 归宿主。
 # ★ 2026-11-19 补 iputils-ping + dnsutils：xben-039/078/083 三题的侦察脚本第一步就是
 #   `ping -c1 <target>`，而镜像里没有 /bin/ping → 直接 command not found，白丢一轮。
 #   dig/nslookup 同理，是 recon 常用件。

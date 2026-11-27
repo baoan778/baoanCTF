@@ -103,7 +103,7 @@ export default function ChatPage() {
         );
         return;
       }
-      // ★ W-P1-2：工具事件按 toolCallId 配对，start 建卡（跑），end 补输出与耗时（完/错）。
+      // ★ 该轮修复：工具事件按 toolCallId 配对，start 建卡（跑），end 补输出与耗时（完/错）。
       //   服务端已瘦身（result 只留尾部 4KB），这里不再二次裁剪，只做配对。
       if (e.type === "tool_execution_start") {
         const id = String(e.toolCallId || "");
@@ -325,7 +325,7 @@ export default function ChatPage() {
     <div className="page">
       <div className="chat">
         <div className="stream" ref={boxRef}>
-          {/* ★ 2026-11-05（W-P0-3）：原来这里只有一句「还没有对话」，一屏 1000px 全是空白。
+          {/* ★ 2026-11-05：原来这里只有一句「还没有对话」，一屏 1000px 全是空白。
               空白态的根子不是缺装饰，是**没有决策可做** —— 所以换成「下一刀」卡：
               黑板当前可动的三刀 + 证据强度，点一下直接填进输入框。
               抢分时最贵的是从零想「现在该干嘛」的那段时间。 */}

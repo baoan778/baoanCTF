@@ -1,7 +1,7 @@
 #!/bin/bash
 set -u
 CFG=${1:-/home/ctf/.pi-ctf/tsec/run-current.ovpn}
-# ★ R11 教训：绝对不要给这份 ovpn 加 --tun-mtu / --mssfix / --auth / --cipher 覆盖。
+# ★ 该轮 教训：绝对不要给这份 ovpn 加 --tun-mtu / --mssfix / --auth / --cipher 覆盖。
 #   服务器开了 --opt-verify，会严格比对 link-mtu/tun-mtu/cipher/auth 组成的 OCC 串；
 #   任何覆盖都会让客户端报 1457 而服务端期望 1557 -> AUTH_FAILED 'Option inconsistency'。
 #   实测：纯净配置 25s 内 Initialization Sequence Completed；加 --tun-mtu 1400 必败。

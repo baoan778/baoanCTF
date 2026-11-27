@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_stop_at_start.py — R12 缺陷 46：停机落盘覆盖「起容器阶段」
+"""test_stop_at_start.py — 该轮 该缺陷：停机落盘覆盖「起容器阶段」
 
 背景
 ----

@@ -10,7 +10,7 @@
 
 ## 本次导入了什么、为什么
 
-操作者要求：「新建题目里缺一个 ai 类型的题目」+「确保每个题目都有对应的 skill」。
+用户要求：「新建题目里缺一个 ai 类型的题目」+「确保每个题目都有对应的 skill」。
 对照下来本项目原本只有 web/pwn/crypto/reverse/forensics/misc/binary 七个题型，
 **ai-ml / malware / osint 三个题型既没有分类也没有 skill** —— 界面上选不到、
 收单器会拒绝、worker 也没有对应战术卡可读。所以只导入这三个模块：

@@ -253,10 +253,10 @@ def main():
     rc, out, err = run("cost", PID, "--json")
     check("cost --json 带槽位密度指标",
           "flags_per_min" in out and "still_claimed_after_score" in out, out[:200])
-    # P2-1：槽位得分密度字段必须在（§9 验收原文点名了 points_per_slot_minute）。
+    # 该轮修复：槽位得分密度字段必须在（§9 验收原文点名了 points_per_slot_minute）。
     # ★ 这里只验「字段存在且可解析」；**不验它非空** —— 空项目没有派活登记/没有 awarded 时
     #   该字段合法地是 null（"无法计算"），要求非空就等于逼实现编一个数出来。
-    check("cost --json 带 P2-1 字段 points_per_slot_minute",
+    check("cost --json 带 该轮修复 字段 points_per_slot_minute",
           "points_per_slot_minute" in out and "slot_minutes" in out
           and "points_unknown_flags" in out, out[:300])
 
@@ -401,7 +401,7 @@ def main():
     rc, out, err = run("flag-declare", PID, "--value", "TEST{t1gate}", ok=(2,))
     check("T1 未带 --source 必须拒", "--source" in (out + err), (out + err)[-300:])
 
-    # P1-1 flag-auto（2026-11-03 新增）：无平台时必须**明确失败**、不许静默成功
+    # 该轮修复 flag-auto（2026-11-03 新增）：无平台时必须**明确失败**、不许静默成功
     # ★ 这里刻意不给真 tsec：验的是「拿不到回执 → 记 error 且 rc=1」，不是平台连通性。
     rc, out, err = run("flag-auto", PID, "--code", "smoke-01",
                        "--flag", "TEST{auto}", ok=(0, 1))
@@ -409,14 +409,14 @@ def main():
           ("拿不到" in out or "不算提交失败" in out), (out + err)[-300:])
     check("flag-auto 不出现 Traceback", "Traceback" not in err, err[-300:])
 
-    # P1-4 flags-left：无平台时必须说「不知道」，不许报「没有剩余旗」
+    # 该轮修复 flags-left：无平台时必须说「不知道」，不许报「没有剩余旗」
     rc, out, err = run("flags-left", ok=(0, 1))
     check("flags-left 无平台时说「拿不到题单」而非「没有剩余」",
           ("拿不到题单" in out or "不知道" in out), (out + err)[-300:])
     rc, out, err = run("flags-left", "--json", ok=(0, 1))
     check("flags-left --json 不崩", "Traceback" not in err, err[-300:])
 
-    # P1-3 slot：槽位账只出建议不代劳，且只读
+    # 该轮修复 slot：槽位账只出建议不代劳，且只读
     _rs0 = _rev()
     rc, out, err = run("slot", PID)
     check("slot 报在跑数与上限", "在跑" in out and "上限" in out, out[:300])
@@ -439,9 +439,9 @@ def main():
     check("kickoff 给出 subagent 调用模板", "subagent(" in out)
     check("kickoff 说明第2轮起是单一可验证工作项", "彼此不重复" in out)
     check("kickoff 提醒换不同模型取多样性", "不同模型" in out)
-    # P2-2：`--target` 必须真落盘（过去只打印不存，兄弟图没据可判）
+    # 该轮修复：`--target` 必须真落盘（过去只打印不存，兄弟图没据可判）
     rc, out2, _ = run("show", KP)
-    check("P2-2 kickoff --target 落到图上（兄弟图判据的来源）",
+    check("该轮修复 kickoff --target 落到图上（兄弟图判据的来源）",
           "nc1.test:1" in out2, out2[-300:])
 
     print("4b-2) preset（题型模板：必查点与约束一次带齐）")

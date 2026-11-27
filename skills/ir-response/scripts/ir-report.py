@@ -13,8 +13,8 @@
 
 产出
 ----
-    <out>              报告（套 templates/report.md）
-    <out 同目录>/timeline.md   时间线（套 templates/timeline.md）
+    <out>              报告（套 sapper 的 templates/report.md）
+    <out 同目录>/timeline.md   时间线（套 sapper 的 templates/timeline.md）
     --ioc-out <path>   单独的 IOC 表（机器可读：CSV / JSON）—— 交出去能直接进封禁流程
 
 设计原则（和黑板一致）

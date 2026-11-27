@@ -141,7 +141,7 @@ OFFICIAL_BASE = "api.deepseek.com"
 def _base_url() -> str:
     """当前**实际调用**的 LLM 端点（决定「官方余额是否代表本次花费」）。
 
-    ★ 2026-11-24 实测缺陷（R12 的同类但更隐蔽）：容器里 PI_PROVIDER=deepseek、
+    ★ 2026-11-24 实测缺陷（该轮的同类但更隐蔽）：容器里 PI_PROVIDER=deepseek、
       DEEPSEEK_API_KEY 也在，一切看起来都是官方 —— 但
       DEEPSEEK_BASE_URL=https://api.dafeiyu.win/v1，是个**自建 OpenAI 兼容端点**。
       于是 costguard 去问 DeepSeek 官方账户（1.12 CNY，低于阈值 2.0）→ allow=false
@@ -168,7 +168,7 @@ def _base_url() -> str:
 def _active_provider() -> str:
     """当前**实际跑题**用的 provider（与余额闸查询的账户可能不是同一个）。
 
-    ★ R12（2026-11-22）实测缺陷：costguard 查的是 DEEPSEEK_API_KEY 指向的
+    ★ 该轮（2026-11-22）实测缺陷：costguard 查的是 DEEPSEEK_API_KEY 指向的
       DeepSeek 官方账户，而解题链路可能走的是自定义 OpenAI 兼容端点（aaa）。
       官方账户欠费 is_available=false 时，会把**根本不花那笔钱**的 run 拦死 ——
       实测 104 题基线一次都没跑起来，报「账户不可用」，而 aaa 端点完全可用。
@@ -208,7 +208,7 @@ def check() -> dict:
     """fetch + 判定。allow=True 表示**可以起新一轮**（含查不到的 fail-open）。"""
     info = fetch()
     th = threshold()
-    # ★ R12：换过 provider 时，官方余额与本次花费无关 → 不拦，但**如实记录**。
+    # ★ 该轮：换过 provider 时，官方余额与本次花费无关 → 不拦，但**如实记录**。
     if _guard_scope() == "skip":
         base = _base_url()
         who = ("base_url=" + base) if base else ("provider=" + _active_provider())

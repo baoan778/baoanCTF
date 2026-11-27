@@ -39,7 +39,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 LOG = ROOT / "log"
 
-# ★ 优化 13：进程识别统一走 tools/procscan.py（原来这里是第三份重复实现，
+# ★ 某轮优化：进程识别统一走 tools/procscan.py（原来这里是第三份重复实现，
 #   且用 'pattern in args' 子串匹配 —— 实测 `bash -c 'tail -F ... sdkshard.py'` 会被
 #   误判成 shard 活着，而这条判据正是「要不要重启」，误判成活着就永远不重启）。
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -50,7 +50,7 @@ STOP_MARK = ROOT / "work" / "solve" / ".supervisor-stop"
 TICK = 30
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ★★ R12 缺陷 49：守护自己死了没人知道（真实事故 R5-01 §3.1b）
+# ★★ 该轮 该缺陷：守护自己死了没人知道（真实事故 某轮复盘 §3.1b）
 #
 #   实测：supervisor.log 14:13:20 之后 **118.5 分钟零 tick**，
 #   孤儿跑完到 15:45，之后 **全场 27.1 分钟零活动**，靠人肉 16:11:47 重启。
@@ -76,7 +76,7 @@ def log(msg: str) -> None:
 def procs(pattern: str) -> list[int]:
     """找出**真的在跑**这个 python 脚本的进程（argv 语义，不是命令行子串）。
 
-    ★★ 2026-11-20 优化 13（实测抓到的误判）：原实现是
+    ★★ 2026-11-20 某轮优化（实测抓到的误判）：原实现是
         `if pattern in args and "supervise.py" not in args`
     也就是「命令行里出现 sdkshard.py 就算」。用 tools/_an_procs2.py 造诱饵实测，
     下面这行会**被误判成 shard 活着**：
@@ -92,7 +92,7 @@ def procs(pattern: str) -> list[int]:
       argv[0] 的 basename 以 python 开头，**且** argv[1] 的 basename 就是目标脚本。
     只认真正被解释器执行的那个脚本，命令行里"提到"不算。
 
-    实现本身已抽到 tools/procscan.py（优化 13 顺手统一了三份重复实现：
+    实现本身已抽到 tools/procscan.py（某轮优化 顺手统一了三份重复实现：
     这里、solver-autostart.sh、bench/live.py 都在判「谁在跑」但各写各的）。
     """
     return procscan.python_script_pids(pattern.rsplit("/", 1)[-1])
@@ -141,7 +141,7 @@ def start_solver() -> None:
            "--shards", os.environ.get("SUP_SHARDS", "3"),
            "--rounds", os.environ.get("SUP_ROUNDS", "40"),
            "--budget", os.environ.get("SUP_BUDGET", "300"),
-           # ★ 2026-11-19 优化 #10：每轮题数保持 24。
+           # ★ 2026-11-19 某轮优化：每轮题数保持 24。
            #   并行调度模拟（tools/_an_sim2.py，run 50607 干净轮真实时长）：
            #     每轮 12 + FIFO 2706s / LPT 2359s        每轮 24 + FIFO 2575s / LPT 2338s
            #     每轮 48 + FIFO 2512s / LPT 2330s        不限轮  + FIFO 2373s / LPT 2328s
@@ -171,7 +171,7 @@ def kill_tree(pid: int) -> None:
 def reap_orphans(include_live: bool = False) -> list[int]:
     """回收无头 pi（孤儿 / 全部）。返回被杀 pid 列表。
 
-    ★★ 2026-11-20 P0-1（历史复盘 R1-01）：
+    ★★ 2026-11-20 该轮修复：
       停机时只 kill parallel_solver + sdkshard 是**不够**的 ——
       sdkshard 用 start_new_session=True 拉起 pi，pi 在独立进程组里，
       父亲一死立刻被 init 收养（ppid=1）继续烧 API。
@@ -196,7 +196,7 @@ def reap_orphans(include_live: bool = False) -> list[int]:
 
 
 def beat() -> None:
-    """写一次心跳（缺陷 49）。硬要求：**任何 return 分支之前都要跳**。
+    """写一次心跳。硬要求：**任何 return 分支之前都要跳**。
 
     为什么放在 tick() 开头而不是每跳结束：tick 内部有多条 return（stopped/unknown/ok/
     restarted/started），写在末尾会漏掉一半。心跳的语义是「守护进程还活着并完成了这次巡检」，
@@ -286,7 +286,7 @@ def main() -> int:
         if a.keep_children:
             log("--keep-children：不杀子进程")
             return 0
-        # ★★ 2026-11-20 P0-1：写标记**不等于停机**。
+        # ★★ 2026-11-20 该轮修复：写标记**不等于停机**。
         #   原来这里只写文件就返回，于是「按脚本名 kill 掉 sdkshard」之后
         #   那些 start_new_session 拉起的 pi 全变孤儿继续烧钱（实测 $0.515/13min）。
         #   现在按「总控 → shard → 无头 pi」的顺序真正收干净：

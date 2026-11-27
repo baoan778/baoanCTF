@@ -25,8 +25,8 @@ export PATH="$PWD/tools/bin:$PATH"
 #   本条清理继续留着，理由是"防陈旧字节码"这个一般性好处，不是治 flaky。
 find board tools -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
 pass=0; fail=0; skip=0; flaky=0
-# ★ R9-A（2026-11-21）：证据文件挪到独立目录 + 开跑前做一次「安全清理」。
-#   血账（R8-05 §3）：清 /tmp 时用了 `rm -rf test*`，把**回归自身的证据**
+# ★ 该轮（2026-11-21）：证据文件挪到独立目录 + 开跑前做一次「安全清理」。
+#   血账（某轮复盘 §3）：清 /tmp 时用了 `rm -rf test*`，把**回归自身的证据**
 #   （test_audit.tsv / test_full_*.log）一起删了 —— 结论还在，但逐文件审计没了。
 #   修法①证据搬到 /tmp/_evidence/（不再与测试 mkdtemp 前缀撞车）；
 #   修法②清理只删**已知测试前缀**且显式排除证据目录，删前先 ls 计数。
@@ -53,7 +53,7 @@ run_one() {
   local out rc full suffix
   suffix="${2:-}"
   full="$EVID/test_full_$(basename "$1" .py)${suffix}.log"
-  # ★ 2026-11-21（R6-05）：开 faulthandler —— 段错误（rc=-11）与解释器内部崩溃
+  # ★ 2026-11-21：开 faulthandler —— 段错误（rc=-11）与解释器内部崩溃
   #   （如 re/_parser 的 AttributeError）在纯 Python 层看不到栈，只有 faulthandler
   #   才会把原生调用栈打到 stderr。代价：失败时多几十行输出（已在全文日志里，不进报告）。
   #   实测触发过：test_cli_smoke 的 flags-left rc=-11、test_nonce 的 re/_parser 崩，
@@ -108,15 +108,15 @@ if [ -f tools/_verify_all.py ]; then
   printf '%s\n' "$vline"
 fi
 
-# ★ R9-C：崩溃观测（客观量，不靠判断）
+# ★ 该轮：崩溃观测（客观量，不靠判断）
 if command -v dmesg >/dev/null 2>&1; then
   _segv=$(dmesg 2>/dev/null | grep -c "signal: 11" || true)
   echo "[crash-watch] dmesg 里 signal: 11 累计 $_segv 次（记录于 $EVID/crash_watch.log）"
   printf "%s\t%s\n" "$(date +%FT%T)" "${_segv:-0}" >> "$EVID/crash_watch.log" 2>/dev/null || true
 fi
 
-# R9-B (2026-11-22): FLAKY 连续两轮出现 -> 升级为 FAIL。
-#   为什么（R9-02）：连续五轮把偶发红记成"吃时序"，实际是 Python 解释器 SIGSEGV。
+# 该轮 (2026-11-22): FLAKY 连续两轮出现 -> 升级为 FAIL。
+#   为什么：连续五轮把偶发红记成"吃时序"，实际是 Python 解释器 SIGSEGV。
 #   "重跑就绿"只说明这次没抽中，不说明没问题。
 #   状态跨轮保留：$EVID/flaky_streak.tsv 每行 "<测试文件><TAB><连续次数>"。
 STREAK="$EVID/flaky_streak.tsv"

@@ -42,13 +42,13 @@ export const api = {
   // 判据在 tools/readiness.mjs（纯函数有 28 组自检），前端只负责「能点开」。
   readiness: () => get("/api/readiness"),
   readinessDrill: (key: string) => get("/api/readiness?drill=" + encodeURIComponent(key)),
-  // 作战台聚合（W-P0-1）：剩余时间 / 成本画像 / 下一步 —— 三路各自可能为 null，界面必须能显示「不知道」
+  // 作战台聚合：剩余时间 / 成本画像 / 下一步 —— 三路各自可能为 null，界面必须能显示「不知道」
   ops: (pid?: string) => get("/api/ops" + (pid ? "?pid=" + encodeURIComponent(pid) : "")),
-  // flag 三态账本（W-P0-2）：accepted/pending/refuted + 平台原始回执
+  // flag 三态账本：accepted/pending/refuted + 平台原始回执
   flagsLedger: (pid?: string) => get("/api/flags/ledger" + (pid ? "?pid=" + encodeURIComponent(pid) : "")),
   // 一键清空「记录」：扫描命中 + flag 账本（服务端要求 confirm）
   flagsClearAll: () => post("/api/flags/clear-all", { confirm: "clear-all" }),
-  // 「下一刀」候选（W-P0-3）：黑板上当前可动的三刀 + 证据强度
+  // 「下一刀」候选：黑板上当前可动的三刀 + 证据强度
   moves: (pid?: string) => get("/api/moves" + (pid ? "?pid=" + encodeURIComponent(pid) : "")),
   kb: (q: string, top = 3) => get("/api/kb?q=" + encodeURIComponent(q) + "&top=" + top),
   subagents: () => get("/api/subagents"),

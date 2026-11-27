@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_lazy_regex.py — R12 缺陷 45：导入期 re.compile SIGSEGV 的确定性缓解
+"""test_lazy_regex.py — 该轮 该缺陷：导入期 re.compile SIGSEGV 的确定性缓解
 
-背景（R9-02 1.1-1.2 的证据链）
+背景（某轮复盘 1.1-1.2 的证据链）
 --------------------------------
 崩溃栈停在 re/_compiler.py:582 _code，调用点是 fgs.py 的**模块级** re.compile；
 内核 dmesg 也记录 Capturing crash ... signal: 11。R5~R8 把这误记成「FLAKY/吃时序」。
@@ -84,7 +84,7 @@ def main():
     ck("B9 flags 一致", got.flags == ref.flags)
     ck("B10 fullmatch 一致", got.fullmatch("abc-1").group(0) == ref.fullmatch("abc-1").group(0))
 
-    print("C) 编译失败不崩（缺陷 45 的关键性质）")
+    print("C) 编译失败不崩（该缺陷的关键性质）")
     bad = LR(r"(unclosed")
     ck("C1 search 返回 None 不抛", bad.search("x") is None)
     ck("C2 已标记 failed", bad._failed is True, repr(bad))
@@ -104,7 +104,7 @@ def main():
     ck("D1 模块级 re.compile 归零", mod_level == [], mod_level)
     ck("D2 存在 _rx 入口", "def _rx(" in src)
     ck("D3 存在 _LazyRegex", "class _LazyRegex" in src)
-    ck("D4 注释写明缺陷编号", "缺陷 45" in src)
+    ck("D4 注释写明缺陷编号", "该缺陷" in src)
 
     print("E) 真实模块正则仍工作")
     ck("E1 NEGATIVE_PAT 命中否定结论", bool(m.NEGATIVE_PAT.search("端口关闭")) is True)

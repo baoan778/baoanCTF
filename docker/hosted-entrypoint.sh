@@ -63,7 +63,7 @@ fi
 # ---- 2) pi 配置（密钥只从环境读）----
 AGENT_DIR="${PI_CODING_AGENT_DIR:-/root/.pi-ctf/agent}"
 mkdir -p "$AGENT_DIR"
-# ★ 2026-11-14 修 P1-5（实测必现，托管跑分的致命断点）：
+# ★ 2026-11-14 修 该轮修复（实测必现，托管跑分的致命断点）：
 #   pi 的 getAgentDir() 只认 $PI_CODING_AGENT_DIR，缺省是 ~/.pi/agent。
 #   原来这里只 `mkdir` 到这个目录、从不 export —— 于是 settings.json（压缩/子智能体策略）、
 #   17 个 skills、11 个 roles、21 个 extensions **全部不被 pi 读到**，

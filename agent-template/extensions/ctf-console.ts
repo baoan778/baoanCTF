@@ -1,7 +1,7 @@
 /**
- * pi-lab: ctf-console —— CTF 值班台（给操作者看的仪表盘）
+ * pi-lab: ctf-console —— CTF 值班台（给用户看的仪表盘）
  *
- * 为什么要它：CTF 是「多题并行 + 长时间跑」的活，操作者最难受的是**看不见状态**：
+ * 为什么要它：CTF 是「多题并行 + 长时间跑」的活，用户最难受的是**看不见状态**：
  *   · 现在在打哪几题？黑板走到哪一步了？（要翻长输出或敲 fgs snapshot）
  *   · 已经命中过哪些 flag 候选？哪些过了平台回执？（散在 log/flag-watch.jsonl）
  *   · 这轮烧了多久、上下文占了百分之几？
@@ -271,7 +271,7 @@ function buildCardLines(ctx, startedMs) {
   return lines;
 }
 
-// buildStatusLine 已删（2026-10-10 操作者：常驻状态栏没用）
+// buildStatusLine 已删（2026-10-10 用户：常驻状态栏没用）
 
 /** 写 Windows 剪贴板（powershell interop）；失败返回错误串 */
 function copyToClipboard(text) {
@@ -344,7 +344,7 @@ export default function ctfConsole(pi) {
   const startedMs = Date.now();
   let panelOn = false;
 
-  // 2026-10-10 操作者：常驻状态栏与启动提示都去掉；用法靠 /ctf 与 /flags 两条命令
+  // 2026-10-10 用户：常驻状态栏与启动提示都去掉；用法靠 /ctf 与 /flags 两条命令
 
   pi.registerCommand("ctf", {
     description: "CTF 值班台：在打哪几题 / 黑板进度 / flag 候选 / 会话开销（再敲一次收起）",

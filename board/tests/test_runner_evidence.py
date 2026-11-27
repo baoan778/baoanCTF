@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""test_runner_evidence.py -- R9-A 回归证据不许被清理吃掉
+"""test_runner_evidence.py -- 该轮 回归证据不许被清理吃掉
 
 为什么
 ------
-R8-05 sec3 记了一次真事故：清 /tmp 时用 `rm -rf test*`，把回归自身的证据
+某轮复盘 sec3 记了一次真事故：清 /tmp 时用 `rm -rf test*`，把回归自身的证据
 （test_audit.tsv / test_full_*.log）一起删了。结论还在（job 输出里有），
 但逐文件审计行没了，无法再复核。
 
-这是"同一类错第二次"：R5-03 是「归档与删除写同一条命令」，这次是「通配符吃掉证据」。
+这是"同一类错第二次"：某轮复盘 是「归档与删除写同一条命令」，这次是「通配符吃掉证据」。
 两次的共同根因 = **删除前没有确认命中范围**。
 
 判据
@@ -89,7 +89,7 @@ def main():
     ck("F1 失败提示指向 $EVID", "$EVID/test_full_" in s)
     ck("F2 不再指向 /tmp 根", "/tmp/test_full_" not in s)
 
-    print("G) R9-B FLAKY 升级 / R9-C 崩溃观测")
+    print("G) 该轮 FLAKY 升级 / 该轮 崩溃观测")
     ck("G1 有 flaky_streak 状态文件", "flaky_streak.tsv" in s)
     ck("G2 连续两次升 FAIL", "_cnt" in s and "ge 2" in s and "FAIL" in s)
     ck("G3 升级后把 flaky 计入 fail", "fail=$((fail+_escalate))" in s)

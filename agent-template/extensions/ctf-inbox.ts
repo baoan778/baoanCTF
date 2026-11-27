@@ -78,7 +78,7 @@ function buildMessage(card) {
   L.push(`类型: ${card.kind || "unknown"}`);
   if (card.platform) L.push(`平台/比赛: ${card.platform}`);
   if (card.target) L.push(`靶场/目标: ${card.target}`);
-  // 操作者 2026-10-10：flag 格式不填 = 让我自己去找
+  // 用户 2026-10-10：flag 格式不填 = 让我自己去找
   L.push(`flag 格式: ${card.flagfmt || "(未填 —— 自己从题面/平台/输出里推断，拿到后逐字确认)"}`);
   if (card.deadline) L.push(`时限: ${card.deadline}`);
   // 注：旧卡片的 notes 不再单独出一行 —— 已合并进「题目内容」（否则会重复出现）
