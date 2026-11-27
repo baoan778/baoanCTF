@@ -16,14 +16,15 @@
 这正是 docs/经验-工程纪律.md §4c 说的「检查器自己站不稳」。
 
 现在的结构：
-  · 唯一可写点 = tools/make-bin.sh 的 HAND_TOOLS
-  · 它落盘到 tools/hand/.hand-tools（进版本控制）
-  · 两份 selfcheck 都**读文件**，不再硬编码
+  · 唯一来源 = tools/hand/ 目录里有哪些文件
+  · tools/make-bin.sh 扫目录，落盘成 tools/hand/.hand-tools（进版本控制）
+  · 两份 selfcheck 都**读那个文件**，不再硬编码
 
-本测试把这三条钉死：
+本测试把这几条钉死：
   1. 清单文件存在且非空
-  2. 清单内容 == make-bin.sh 的 HAND_TOOLS（集合相等，顺序无关）
-  3. 两份 selfcheck 里**没有**硬编码的 HAND_TOOLS=（防有人又写回去）
+  2. 清单内容 == tools/hand/ 目录内容（集合相等，顺序无关）
+  3. 清单内容 == make-bin.sh 实际会生成的清单
+  4. 两份 selfcheck 里**没有**硬编码的 HAND_TOOLS=（防有人又写回去）
 """
 import re
 import sys
@@ -61,10 +62,23 @@ def manifest_entries() -> list:
     return out
 
 
+def hand_dir_entries() -> list:
+    """tools/hand/ 里除 .hand-tools 之外的文件名 —— 这才是唯一来源。"""
+    d = ROOT / "tools" / "hand"
+    if not d.is_dir():
+        return []
+    return sorted(p.name for p in d.iterdir()
+                  if p.is_file() and p.name != ".hand-tools")
+
+
 def make_bin_entries() -> list:
-    src = MAKE_BIN.read_text(encoding="utf-8", errors="replace")
-    m = re.search(r'^HAND_TOOLS="([^"]*)"', src, re.M)
-    return m.group(1).split() if m else []
+    """跑一遍 make-bin.sh 的清单来源（扫目录），不与脚本里的字面量比对。
+
+    ★ 2026-11-27：原实现捕 HAND_TOOLS="..." 的字面量再做集合比较。而清单
+    本身漏了两个入口（pggdb / rsactf），于是「清单 == 字面量」永远成立、永远
+    绿 —— 校验器和被校验的东西是同一份错误数据。改成和目录比：目录才是真源。
+    """
+    return hand_dir_entries()
 
 
 def main() -> int:
@@ -74,11 +88,13 @@ def main() -> int:
     check("清单非空", len(ents) > 0, str(len(ents)))
     check("清单里有 pi（2026-11-24 新增）", "pi" in ents, ",".join(ents[:6]))
 
-    print("2) 清单 == make-bin.sh 的 HAND_TOOLS（集合相等）")
+    print("2) 清单 == tools/hand/ 目录（集合相等）")
     mb = make_bin_entries()
-    check("make-bin.sh 里找到了 HAND_TOOLS=", len(mb) > 0, str(mb)[:80])
-    check("两边集合相等", set(ents) == set(mb),
-          "仅清单有:%s 仅脚本有:%s" % (set(ents) - set(mb), set(mb) - set(ents)))
+    check("tools/hand/ 里找到了入口", len(mb) > 0, str(mb)[:80])
+    check("清单与目录集合相等", set(ents) == set(mb),
+          "仅清单有:%s 仅目录有:%s" % (set(ents) - set(mb), set(mb) - set(ents)))
+    if set(ents) != set(mb):
+        check("修法", False, "跑 bash tools/make-bin.sh 重新落盘清单")
 
     print("3) 两份 selfcheck 不再硬编码 HAND_TOOLS=")
     for sc in SELFCHECKS:
@@ -103,7 +119,11 @@ def main() -> int:
         check("%s/%s 会读清单文件" % (sc.parent.name, sc.name),
               ".hand-tools" in src)
 
-    print("4) 反向：清单少一个就必须能发现")
+    print("4) 回归：清单曾漏掉 pggdb / rsactf（make-bin 硬编码时代）")
+    for miss in ("pggdb", "rsactf"):
+        check("清单里有 %s" % miss, miss in ents)
+
+    print("5) 反向：清单少一个就必须能发现")
     # 用集合比较模拟「清单漏了 pi」
     fake = [e for e in ents if e != "pi"]
     check("漏掉 pi 时集合不相等（判据有效）", set(fake) != set(mb))

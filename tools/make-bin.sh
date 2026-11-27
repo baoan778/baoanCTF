@@ -186,7 +186,11 @@ EOF
 # ── 6. 人手写的入口：tools/hand/ → bin/ ──────────────────────────
 # 为什么要分开：这一批不是"生成物"，内容是人维护的；放进 bin/ 会被上面的 rm -rf 吃掉。
 # 软链还是拷贝由 git core.symlinks 决定（见下面的分流注释）：只留 hand/ 一份正本。
-HAND_TOOLS="py pi fgs selfcheck sesscan sweep handover winrm tsec pwnkit f5 vol uibuild"
+# ★ 2026-11-27：清单改为**从目录自动发现**，不再手写。
+#   实测缺陷：硬编码的清单漏了 pggdb 与 rsactf，跑一次本脚本就把这两个入口
+#   静默删掉（重建后 112 → 110），而末尾护栏只校验清单里的名字，看不见漏的那些。
+#   手写清单 + 只校验自身 = 永远发现不了自己的遗漏；改为扫目录，缺谁都不可能。
+HAND_TOOLS="$(cd "$T/hand" && ls -1 | grep -vx '.hand-tools' | LC_ALL=C sort | tr '\n' ' ')"
 # ★ 2026-11-18：本机 git core.symlinks=false —— MSYS 的 `ln -s` **确实**能建真软链，
 #   但 git 把它们存成 120000 对象，这种仓库在没开开发者模式的 Windows 上 checkout 出来
 #   是一堆「内容是 ../hand/xxx 的普通文件」→ 入口全废，且极难归因。
@@ -197,10 +201,11 @@ HAND_TOOLS="py pi fgs selfcheck sesscan sweep handover winrm tsec pwnkit f5 vol 
 #   为什么：selfcheck 要做「bin 与 hand 正本一致」的检查，也需要同一份清单，
 #   而它原本**各自硬编码一份 HAND_TOOLS** —— 三份副本，改了这里忘了那里就静默漂
 #   （历史真发生过：加了工具但 selfcheck 不查它，byte-equal 检查形同虚设）。
-#   现在只留一个可写点：本脚本。selfcheck 读这个文件，不自己维护列表。
+#   现在只留一个来源：tools/hand/ 目录本身；本文件是它落盘后的快照，
+#   selfcheck 读这个快照，不自己维护列表。
 {
-  printf '# 人手写入口清单 —— 由 tools/make-bin.sh 生成，别手改。\n'
-  printf '# 单一可写点：tools/make-bin.sh 的 HAND_TOOLS。\n'
+  printf '# 人手写入口清单 —— 由 tools/make-bin.sh 扫 tools/hand/ 生成，别手改。\n'
+  printf '# 唯一来源：tools/hand/ 目录里有哪些文件。\n'
   for n in $HAND_TOOLS; do printf '%s\n' "$n"; done
 } > "$T/hand/.hand-tools"
 
