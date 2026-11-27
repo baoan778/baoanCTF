@@ -21,7 +21,7 @@
     tsec submit <unique_code> <flag>
     tsec close <unique_code>
     tsec vpn up|status|down [--file x.ovpn]
-    tsec healthcheck                走 VPN 里的 http://10.0.100.58 探活（SDK 用的就是它）
+    tsec healthcheck                走 VPN 里的探活口探活（见 TSEC_HEALTHCHECK_URL）
     tsec run-new [--set 4] [--agent N]
                                     用平台 UI token 新建跑分任务 → 拿 BENCHMARK_TOKEN+ovpn
     tsec run-status [run_id]        看当前/指定跑分任务状态（含剩余时间）
@@ -499,7 +499,9 @@ def cmd_addr(args):
     die(f"{code} 在 {wait}s 内没就绪（status={me.get('container_status')}）", 1)
 
 
-VPN_HEALTHCHECK_URL = "http://10.0.100.58"   # SDK 里 _VPN_HEALTHCHECK_URL，只在靶场 VPN 里可达
+VPN_HEALTHCHECK_URL = os.environ.get(
+    "TSEC_HEALTHCHECK_URL", "http://10.0.100.58")   # 平台 SDK 的探活口，只在靶场 VPN 里可达；
+#   靶场网段变了用 TSEC_HEALTHCHECK_URL 覆盖，不必改代码。
 
 
 def _opener():
@@ -559,12 +561,12 @@ def _platform_request(cfg: Config, method: str, path: str, body: dict | None = N
 
 
 def cmd_healthcheck(_args):
-    """VPN 联通探活：平台 SDK 用的就是这个地址（http://10.0.100.58）。
+    """VPN 联通探活：平台 SDK 用的就是这个探活口（见 VPN_HEALTHCHECK_URL）。
 
     通了说明靶场容器地址也能连；不通就说明隧道没建起来（先 `tsec vpn status`）。
 
     ★ 2026-11-03 实测踩坑：本机有**透明代理**，80 端口对任意 IP 都 connect 成功，
-      连不存在的 10.0.100.199 也"通"，代理回 `HTTP/1.1 502 Bad Gateway`。
+      连一个不存在的内网 IP 也"通"，代理回 `HTTP/1.1 502 Bad Gateway`。
       所以 502/503 必须单独判，且**明确告诉人「这是代理，不是平台」**，
       否则会误以为 VPN 通了。`/dev/tcp` 探活在本机完全不可信。
     """
@@ -705,7 +707,7 @@ def cmd_run_new(args):
         print(f"   已写入 {config_candidates()[1]}")
     print("\n下一步（趁 10 分钟窗口）：")
     print(f"  tsec vpn up --file {cfg.vpn_file or '<run-XXX.ovpn>'}")
-    print("  tsec healthcheck      # 探 10.0.100.58，通了才算 VPN 真的通")
+    print("  tsec healthcheck      # 探平台的 VPN 探活口，通了才算 VPN 真的通")
     print("  tsec list             # ★马上列一次，避免 wait_expired")
     return 0
 

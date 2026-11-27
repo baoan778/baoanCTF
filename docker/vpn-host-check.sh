@@ -3,12 +3,12 @@
 # vpn-host-check.sh —— 既定决策（VPN 归宿主）落地前的「能不能这么干」体检
 #
 # 用法（在 WSL 里跑，不是容器里）：
-#   wsl.exe -d MyLinux -e bash -lc 'cd /mnt/d/baoan && bash docker/vpn-host-check.sh'
+#   wsl.exe -d <发行版名> -e bash -lc 'cd <仓库根> && bash docker/vpn-host-check.sh'
 #
 # 它只读不写，回答 4 个问题：
 #   1) 宿主有没有 openvpn / tun 设备 / 可用的 sudo
 #   2) 容器当前用哪种网络模式（bridge 还是 host）
-#   3) 靶场网段 10.0.100.58 从「MyLinux / 容器」两处分别通不通
+#   3) 靶场网段（默认见 TARGET_IP）从「WSL / 容器」两处分别通不通
 #   4) 结论：A 方案能不能直接跑；不能的话卡在哪一步、下一句命令是什么
 #
 # ★★ 为什么必须用 HTTP 语义探活，不能用 /dev/tcp（2026-11-03 实测踩到）：
@@ -16,14 +16,14 @@
 #   实测证据：
 #     /dev/tcp/10.0.100.199/80  -> OPEN（10.0.100.199 是不存在的地址）
 #     /dev/tcp/1.1.1.1/80       -> OPEN
-#     /dev/tcp/10.0.100.58/1    -> TimeoutError（只有 80 被拦）
-#     curl http://10.0.100.58   -> HTTP/1.1 502 Bad Gateway（代理回的）
+#     /dev/tcp/<target>/1       -> TimeoutError（只有 80 被拦）
+#     curl http://<target>      -> HTTP/1.1 502 Bad Gateway（代理回的）
 #   所以「TCP 能连」在本机**不构成任何证据**。必须看 HTTP 状态码：
 #     2xx/3xx = 平台真的应答；502/503 = 打到代理了，等于没通。
 # =============================================================================
 set -uo pipefail
 
-LAB="${PI_LAB_ROOT:-/mnt/d/baoan}"
+LAB="${PI_LAB_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 TARGET_IP="${TSEC_HEALTHCHECK_IP:-10.0.100.58}"
 CONTAINER="${PICTF_CONTAINER:-pictf}"
 
@@ -67,10 +67,10 @@ if docker inspect "$CONTAINER" >/dev/null 2>&1; then
   if [ "$NETMODE" = "host" ]; then
     ok "host 模式 —— 容器与 Docker VM 共享网络栈，宿主侧路由改动对它可见（A 可行）"
   else
-    bad "bridge 模式（$NETMODE）—— 容器走 Docker Desktop VM 的 NAT，与 MyLinux 的 tun0 不是同一命名空间"
+    bad "bridge 模式（$NETMODE）—— 容器走 Docker Desktop VM 的 NAT，与 WSL 的 tun0 不是同一命名空间"
     printf '     -> A 方案要生效，必须二选一：\n'
     printf '       (a) 容器改 --network host（改 compose.yaml 属部署形态变更，需拍板）\n'
-    printf '       (b) 容器内加静态路由：ip route add %s/32 via <MyLinux eth0 IP>\n' "$TARGET_IP"
+    printf '       (b) 容器内加静态路由：ip route add %s/32 via <WSL eth0 IP>\n' "$TARGET_IP"
   fi
 else
   warn "容器 $CONTAINER 不存在，跳过"
@@ -79,7 +79,7 @@ fi
 echo
 echo "=== 3. 靶场探活（HTTP 语义，502 视为不通）==="
 URL="http://${TARGET_IP}"
-ML_CODE=$(http_probe "$URL"); printf '  MyLinux   %s -> HTTP %s\n' "$URL" "$ML_CODE"
+ML_CODE=$(http_probe "$URL"); printf '  WSL       %s -> HTTP %s\n' "$URL" "$ML_CODE"
 if verdict "$ML_CODE"; then ML=1; else ML=0; fi
 if docker inspect "$CONTAINER" >/dev/null 2>&1; then
   CT_CODE=$(docker exec "$CONTAINER" bash -lc "curl -sS -o /dev/null -m 6 -w '%{http_code}' '$URL' 2>/dev/null || echo 000" | tr -d '\r')

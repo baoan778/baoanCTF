@@ -233,7 +233,7 @@
 | `tsec submit <unique_code> <flag>` | 提交 flag；`duplicate` = 该 flag 早交过了（幂等，别改 flag 硬试） |
 | `tsec close <unique_code>` | 释放容器（同时最多 3 道，满了先关一道） |
 | `tsec vpn up --file <x.ovpn>` / `status` / `down` | 起/查/停跑分 VPN（OpenVPN；日志出现 `Initialization Sequence Completed` 才算通）。★ 2026-11-04 起 **status/down 零依赖**（没 openvpn/tun/sudo 也能跑，只报「缺什么」），**只有 up 会被缺件挡住**并给出可执行指引；容器内要真起隧道需 `devices:/dev/net/tun` + `cap_add:NET_ADMIN` + openvpn（compose/Dockerfile 已配好）。回归：`python3 board/tests/test_tsec_vpn.py`（12 项，宿主与容器都要跑） |
-| `tsec healthcheck` | 探 `http://10.0.100.58`（平台 SDK 用的靶场探活口）——**它在 VPN 里才可达，通了才算 VPN 真通** |
+| `tsec healthcheck` | 探平台的靶场探活口（`TSEC_HEALTHCHECK_URL`，默认见 `tsecbench.py`）——**它在 VPN 里才可达，通了才算 VPN 真通** |
 | `tsec run-new --agent N [--set 4]` | 用平台 UI 的 JWT 建跑分任务 → 拿 `BENCHMARK_TOKEN` + 该任务 ovpn（写回 `~/.config`）。★建完马上 `tsec list`，平台只等 10 分钟（否则 `wait_expired`） |
 | `tsec run-status [run_id]` | 看任务状态/剩余时间/得分/异常，并顺手把 `vpn_config` 落盘 |
 | `tsec sets` | 列可用试题集（要 platform_token）：id / 题数 / 满分 / 时长 / **能否本地跑**。`hosted_only=True` 的（Tsecbench v2、CourseCrack、T-Vuls、hideonbush）只能平台托管；本地可选 **4** Tsecbench v1(63题/23000/6h)、**9** bctf-2026、**1** XBOW、**5** Cybench |

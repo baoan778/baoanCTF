@@ -2,7 +2,7 @@
 # =============================================================================
 # vpn-tunnel-up.sh —— 宿主侧一键起「VPN + CONNECT 代理」并打印容器该用的环境变量
 #
-# 用法（WSL/MyLinux 侧）：
+# 用法（宿主 WSL 侧）：
 #   bash docker/vpn-tunnel-up.sh --file /path/to/task.ovpn
 #   bash docker/vpn-tunnel-up.sh                # 不起 VPN，只起代理（VPN 已手动起过）
 #   bash docker/vpn-tunnel-up.sh --down         # 收拾干净
@@ -16,18 +16,20 @@
 #
 # 为什么是代理而不是 --network host（2026-11-03 实测证伪，别走回头路）：
 #   A1 `--network host`：host 容器看到 Docker Desktop VM 的 eth0
-#       （MAC de:5d:34:7e:db:4e / gw 192.168.65.1），不是 MyLinux 的
+#       （MAC de:5d:34:7e:db:4e / gw 192.168.65.1），不是 WSL 的
 #       （00:15:5d:93:0e:ed / 172.28.208.1）→ 宿主起 VPN 容器照样不通。
 #   A2 容器内静态路由：`ip route add ... via 172.28.208.177` → 内核
 #       `Nexthop has invalid gateway`；加 onlink → `No route to host`
-#       （容器与 MyLinux 不在同一二层，不能互为下一跳）。
-#   A3 代理（本脚本）：容器**能** TCP 直连 MyLinux（实测收到 I-AM-MYLINUX），
+#       （容器与 WSL 不在同一二层，不能互为下一跳）。
+#   A3 代理（本脚本）：容器**能** TCP 直连 WSL（实测收到 I-AM-WSL），
 #       所以把连接受托给宿主侧代理即可。实测容器经代理读到 TARGET-OK。
 # =============================================================================
 set -uo pipefail
 
-LAB="${PI_LAB_ROOT:-/mnt/d/baoan}"
+LAB="${PI_LAB_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 PROXY_PORT="${TSEC_PROXY_PORT:-8888}"
+# 靶场探活口：网段随任务变，用环境变量覆盖，别把某一轮的 IP 写进脚本。
+HC_IP="${TSEC_HEALTHCHECK_IP:-10.0.100.58}"
 VPN_DIR="${TSEC_VPN_DIR:-$HOME/tsec}"
 OVPN=""
 DOWN=0
@@ -126,7 +128,7 @@ EOF
 
 echo "=== 5. 从容器探一次 ==="
 CODE=$(docker exec pictf bash -lc \
-  "curl -sS -o /dev/null -m 8 -w '%{http_code}' -x http://${HIP}:${PROXY_PORT} http://10.0.100.58 2>/dev/null || echo 000" \
+  "curl -sS -o /dev/null -m 8 -w '%{http_code}' -x http://${HIP}:${PROXY_PORT} http://${HC_IP} 2>/dev/null || echo 000" \
   | tr -d '\r')
 case "$CODE" in
   2*|3*) ok "容器经代理拿到 HTTP $CODE —— 平台真的应答了" ;;

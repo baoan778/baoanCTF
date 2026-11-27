@@ -4,26 +4,26 @@
 #
 # 为什么需要它（2026-11-03 实测，A1/A2 已被证伪）：
 #   A1（容器 --network host）：host 模式容器看到的是 Docker Desktop VM 的网络栈
-#       实测 MAC de:5d:34:7e:db:4e / 网关 192.168.65.1，**不是** MyLinux 的
+#       实测 MAC de:5d:34:7e:db:4e / 网关 192.168.65.1，**不是** WSL 的
 #       00:15:5d:93:0e:ed / 172.28.208.1 → 宿主起 VPN，容器照样不通。
 #   A2（容器内加静态路由）：`ip route add 10.99.99.0/24 via 172.28.208.177`
 #       内核报 `Nexthop has invalid gateway`；加 onlink 则 `No route to host`
-#       —— 容器与 MyLinux 不在同一二层，无法作为下一跳。
-#   A3（本文件）：容器**能**用 TCP 直连 MyLinux（实测 172.28.208.177:9098
-#       收到 "I-AM-MYLINUX"）。所以在 MyLinux 上起一个 CONNECT 代理，
+#       —— 容器与 WSL 不在同一二层，无法作为下一跳。
+#   A3（本文件）：容器**能**用 TCP 直连 WSL（实测 172.28.208.177:9098
+#       收到 "I-AM-WSL"）。所以在 WSL 上起一个 CONNECT 代理，
 #       容器用 http_proxy 指过去 → 容器内一切 HTTP(S) 客户端自动走 VPN 路由。
-#       实测：容器经此代理读到 10.99.99.99:9099 的 "HELLO-FROM-MYLINUX"。
+#       实测：容器经此代理读到 VPN 侧地址的应答。
 #
-# 为什么在 MyLinux 跑而不是容器里：VPN 归宿主。VPN 起来后
-#   MyLinux 有 tun0 + 到靶场的路由，代理只是把容器的连接受托给它。
+# 为什么在宿主侧跑而不是容器里：VPN 归宿主。VPN 起来后
+#   WSL 有 tun0 + 到靶场的路由，代理只是把容器的连接受托给它。
 #
-# 用法（MyLinux 侧，需 root 或已起 VPN 的普通用户）：
+# 用法（宿主 WSL 侧，需 root 或已起 VPN 的普通用户）：
 #   python3 tools/tunnel-proxy.py --port 8888            # 前台
 #   nohup python3 tools/tunnel-proxy.py --port 8888 &    # 后台
 #
 # 容器侧（compose.yaml 里加 environment）：
-#   http_proxy:  http://<MyLinux eth0 IP>:8888
-#   https_proxy: http://<MyLinux eth0 IP>:8888
+#   http_proxy:  http://<WSL eth0 IP>:8888
+#   https_proxy: http://<WSL eth0 IP>:8888
 #   no_proxy:    localhost,127.0.0.1,::1,.local
 #
 # 安全边界：只监听在本机/内网，不做转发白名单之外的事；仅支持 CONNECT
@@ -77,7 +77,7 @@ def _handle(client: socket.socket, allowed_hosts: set[str] | None) -> None:
 
         # ── 明文 HTTP 代理（绝对 URI）：`GET http://host:port/path HTTP/1.1` ──
         #   ★ 2026-11-03：原来只支持 CONNECT，导致 `tsec healthcheck`
-        #     （http://10.0.100.58 明文）被自己回 405 —— 那不是网络不通，
+        #     （探活口用明文 http）被自己回 405 —— 那不是网络不通，
         #     是代理能力缺口。明文必须支持，否则 healthcheck 永远探不了。
         if method != "CONNECT":
             if not target.lower().startswith("http://"):

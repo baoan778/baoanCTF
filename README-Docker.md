@@ -1,6 +1,6 @@
 # Docker 方式（推荐；与 WSL 方式二选一）
 
-> 本文件是**实测版**：镜像 `pictf-webui:0.2.0` 已在本机（Win11 + WSL2 MyLinux + Docker Desktop 29.8.2）构建、起服、跑通端到端。
+> 本文件是**实测版**：镜像 `pictf-webui:0.2.0` 已在本机（Win11 + WSL2 + Docker Desktop 29.8.2）构建、起服、跑通端到端。
 > 详细证据见 `docs/交付-实施报告.md`，故障处置见 `docs/交付-故障处置.md`。
 
 ---
