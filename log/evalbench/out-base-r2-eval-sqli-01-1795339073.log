@@ -1,3 +1,0 @@
-FOUND_FLAG=flag{local-eval-sqli-3f9a1c}
-
-利用方式：在 `/login` 对 `username` 进行 SQL 注入，使用 `' OR 1=1--` → 得到 admin 会话 `tok-admin-9f21` → `/dashboard` 直接返回了 flag。

@@ -1,3 +1,0 @@
-已确认：IDOR 位于 `/note?id=`，私有笔记 #2 泄露了 flag。
-
-FOUND_FLAG=flag{local-eval-idor-7b2d40}

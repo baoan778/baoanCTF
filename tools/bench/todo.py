@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """bench/todo.py —— 命令行版「待解清单」（照抄就是下一刀的选题）。
 
-★ 2026-11-20 优化 13 重写。原版四个问题：
-  1. token 与 base_url 硬编码（旧 run 的 1b0b3f85-…，早已 409）；
+★ 2026-11-20 重写。原版四个问题：
+  1. token 与 base_url 硬编码在脚本里（旧任务凭据早已失效，却报不出原因）；
   2. 预算算法是第三份副本（120/180/300 + cap 600/420），与真正下发的 150/300/480 漂移；
   3. 路径写死 /opt/pi-ctf/work/solve/ledger.json，宿主上跑必 FileNotFoundError；
   4. 网络失败直接抛栈。

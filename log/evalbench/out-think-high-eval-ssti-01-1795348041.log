@@ -1,5 +1,0 @@
-FOUND_FLAG=flag{local-eval-ssti-c58e12}
-
-已确认：注入点 `/hello?name=`，SSTI `{{7*7}}`→49，`{{config}}` 直接回显 `flag{local-eval-ssti-c58e12}`（byte-exact 校过）。
-已证伪：无。
-还差什么：无。

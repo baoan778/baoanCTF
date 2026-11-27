@@ -1,3 +1,0 @@
-FOUND_FLAG=flag{local-eval-idor-7b2d40}
-
-IDOR 越权访问：直接访问 `/note?id=2` 就会返回私有 note，其中包含 flag。

@@ -1,3 +1,0 @@
-{"arm": "think-medium", "summary": "think-medium-20261122-194254-summary.json", "n": 48, "ok": 48, "cost_est_usd": 0.074368, "finished_at": "2026-11-22T19:42:54"}
-{"arm": "think-high", "summary": "think-high-20261122-195232-summary.json", "n": 24, "ok": 23, "cost_est_usd": 0.036017, "finished_at": "2026-11-22T19:52:32"}
-{"arm": "think-high", "summary": "think-high-20261122-195303-summary.json", "n": 3, "ok": 3, "cost_est_usd": 0.004514, "finished_at": "2026-11-22T19:53:03"}

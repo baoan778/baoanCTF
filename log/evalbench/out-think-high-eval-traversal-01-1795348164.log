@@ -1,5 +1,0 @@
-FOUND_FLAG=flag{local-eval-traversal-4d90ab}
-
-- 攻击面：`/file?name=` 存在路径穿越，直接读 `/tmp/flag.txt` 得到逐字 flag。
-- 已确认的路径：`/file?name=../../../../tmp/flag.txt`；另顺手确认 `../../../../etc/passwd` 可读（佐证穿越成立）。
-- 已证伪：`/flag`、`flag.txt` 在 / 和 /root 等处均不存在。

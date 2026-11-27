@@ -213,7 +213,7 @@ chk("无会话时 wrapup_args 返回 None", sdkshard.wrapup_args(tmp / "nope", "
 
 # ─────────────────────────────────────────────────────────────
 print()
-print("=== I. system prompt 瘦身（优化 06）===")
+print("=== I. system prompt 瘦身===")
 sysmd = sdkshard.solver_system(None)
 # AGENTS.md 关掉后必须靠 SOLVER_SYSTEM 保住的 4 条纪律
 for kw, why in [("注入信号", "注入防护"), ("ensure-tool.sh", "缺工具自装"),
@@ -230,7 +230,7 @@ chk("瘦身可被 PI_SOLVE_SLIM=0 关掉", 'PI_SOLVE_SLIM' in src)
 
 # ─────────────────────────────────────────────────────────────
 print()
-print("=== J. 容器降权后可写性（优化 08）===")
+print("=== J. 容器降权后可写性===")
 _hf = HERE / "home-fix.sh"
 chk("tools/home-fix.sh 存在且可执行", _hf.exists() and os.access(str(_hf), os.X_OK), str(_hf))
 if _hf.exists():
@@ -286,7 +286,7 @@ if _sc1.exists():
 
 # ─────────────────────────────────────────────────────────────
 print()
-print("=== K. 优化 #10：预算与 LPT 队列排序（并发容量利用率）===")
+print("=== K. 某轮优化：预算与 LPT 队列排序（并发容量利用率）===")
 import importlib.util as _ilu  # noqa: E402
 _pspec = _ilu.spec_from_file_location("_psolver", str(HERE / "parallel_solver.py"))
 _ps = _ilu.module_from_spec(_pspec)
@@ -327,7 +327,7 @@ chk("队列写入用的是 LPT 顺序（不是算完就扔）",
 
 # ─────────────────────────────────────────────────────────────
 print()
-print("=== L. 优化 #12：砍掉解题用不到的扩展工具（system prompt 第一大成本）===")
+print("=== L. 某轮优化：砍掉解题用不到的扩展工具（system prompt 第一大成本）===")
 _sd = _ilu.spec_from_file_location("_sdkshard", str(HERE / "sdkshard.py"))
 _sdm = _ilu.module_from_spec(_sd)
 _sd.loader.exec_module(_sdm)
@@ -340,7 +340,7 @@ for _bad in ("subagent", "subagent_supervisor", "bg_wait", "source_check"):
 for _keep in ("obs_recall", "fetch_content", "get_search_content", "web_search"):
     chk("默认**不**排除 %s（保留救命工具）" % _keep, _keep not in _ex.split(","), _ex)
 # ★ 2026-11-21（R5-C）判据变更：triage 从「必须保留」改为「默认排除」。
-#   理由（实测，不是偏好）：138 run / 2350 次工具调用里 triage **0 次**；
+#   理由（实测，不是偏好）：历史会话 / 2350 次工具调用里 triage **0 次**；
 #   sdkshard 跑的是 TSecBench 远程靶场，题面没有附件，triage 的“附件入场分流”
 #   能力在这条链路上用不上，而它的 schema 每轮随 system prompt 重发。
 #   风险控制：① 只影响 sdkshard 这条跑分链路，本地 CTF 走常规 pi（全套工具）；
@@ -363,7 +363,7 @@ shutil.rmtree(tmp, ignore_errors=True)
 
 # ─────────────────────────────────────────────────────────────
 print()
-print("=== M. 优化 #13：进程识别统一 + 预算策略单一事实来源 ===")
+print("=== M. 某轮优化：进程识别统一 + 预算策略单一事实来源 ===")
 _procs = HERE / "procscan.py"
 chk("tools/procscan.py 存在（进程识别的唯一实现）", _procs.is_file())
 sys.path.insert(0, str(HERE))
@@ -435,7 +435,7 @@ chk("live.py 借 token 也走 procscan（子串匹配会读到错进程）",
 _auto_src = (HERE / "solver-autostart.sh").read_text(encoding="utf-8", errors="replace")
 chk("solver-autostart 优先调 procscan", "procscan.py" in _auto_src)
 
-# ⑤ 预算策略单一事实来源：三处副本必须同值（优化 #10 改基线时漏过两处）
+# ⑤ 预算策略单一事实来源：三处副本必须同值（某轮优化 改基线时漏过两处）
 sys.path.insert(0, str(HERE / "bench"))
 import solve_policy  # noqa: E402
 chk("solve_policy 基线是 150/300/480",
@@ -464,7 +464,7 @@ except Exception as _e:  # noqa: BLE001
 
 _todo_src = (HERE / "bench" / "todo.py").read_text(encoding="utf-8", errors="replace")
 # 查「有没有把凭据写进赋值」，不查「源码里是否出现某串」——
-# 第一版查 `"1b0b3f85" not in 源码`，结果被我自己写的 docstring（说明历史）命中。
+# 第一版查「源码里不出现某个旧凭据串」，结果被 docstring 里的说明文字自己命中。
 chk("bench/todo.py 没有把 token 写死在代码里（旧 token 恒 409 却说不出原因）",
     not re.search(r'(?m)^\s*(TOK|TOKEN|BENCHMARK_TOKEN)\s*=\s*["\'][^"\']+["\']', _todo_src))
 chk("bench/todo.py 预算走 solve_policy",
@@ -472,7 +472,7 @@ chk("bench/todo.py 预算走 solve_policy",
 
 # ─────────────────────────────────────────────────────────────
 print()
-print("=== N. 优化 #15：/proc 读 D 态进程会永久阻塞（把整条链路挂死）===")
+print("=== N. 某轮优化：/proc 读 D 态进程会永久阻塞（把整条链路挂死）===")
 # 背景（2026-11-20 实测）：容器里出现一批 D 态残留（ps/find/grep 卡在
 # __access_remote_vm / __vma_start_write / proc_map_files_readdir）。
 # 读它们的 /proc/<pid>/cmdline 或 /environ 会**永久阻塞**，而 /proc/<pid>/stat 不会。
@@ -519,7 +519,7 @@ finally:
         os.environ["PI_LAB_PROC_ROOT"] = _old_root
 shutil.rmtree(_fake, ignore_errors=True)
 
-# 其余四处读 /proc 的地方都必须有同一道守卫（判据抄多份必然漂移 —— 优化 13 的教训）
+# 其余四处读 /proc 的地方都必须有同一道守卫（判据抄多份必然漂移 —— 某轮优化 的教训）
 chk("live.py 借 token 前先看状态（environ 同样会阻塞）",
     "_alive_state" in _lvsrc and 'in ("Z", "D", "X", "x")' in _lvsrc)
 chk("live.py 的状态判据复用 procscan（不另写一份）", "procscan._read_state" in _lvsrc)
@@ -536,7 +536,7 @@ for _sw in ("bin/sweep", "hand/sweep"):
     chk("%s 读 cmdline 前先看状态（清残留要遍历一堆 pid）" % _sw,
         "case \"$_st\" in D|X|x)" in _sws)
 
-# ── O 组：优化 15 的提示词侧（findflag.sh 取代 find / 全盘扫） ────────────────
+# ── O 组：某轮优化 的提示词侧（findflag.sh 取代 find / 全盘扫） ────────────────
 _ff = HERE / "findflag.sh"
 chk("findflag.sh 存在且可执行", _ff.exists() and os.access(str(_ff), os.X_OK))
 _ffs = _ff.read_text(encoding="utf-8", errors="replace") if _ff.exists() else ""

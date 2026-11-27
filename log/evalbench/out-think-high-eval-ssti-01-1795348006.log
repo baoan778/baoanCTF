@@ -1,6 +1,0 @@
-FOUND_FLAG=flag{local-eval-ssti-c58e12}
-
-- 已确认：`/hello?name=` 存在 SSTI，可用 `{{config}}` 读取配置，得到 `flag{local-eval-ssti-c58e12}`。
-- 已证伪：无。
-- 还差什么：无，flag 已逐字取出。
-

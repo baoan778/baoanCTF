@@ -1,3 +1,0 @@
-SSTI 被确认是可行的攻击点，`{{config}}` 直接从靶场响应中回显了 flag。
-
-FOUND_FLAG=flag{local-eval-ssti-c58e12}

@@ -8,7 +8,6 @@ docs/writeups/
 docs/archive/
 docs/参考-*.md
 docs/调研/
-docs/ui-reference/
 docs/product/
 docs/*.png
 docs/学习-*.md
@@ -18,8 +17,6 @@ docs/复盘-*.md
 # ── 大而无用 / 宿主专用 ──
 vendor/
 源码/
-learning/
-learning-notes/
 bench/
 kb/
 log/

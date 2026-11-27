@@ -1,3 +1,0 @@
-FOUND_FLAG=flag{local-eval-ssti-c58e12}
-
-已确认：`/hello?name=` 处存在 SSTI（服务端模板注入），用 `{{config}}` 读取到了 config 中的 `FLAG` 键，按原样返回。

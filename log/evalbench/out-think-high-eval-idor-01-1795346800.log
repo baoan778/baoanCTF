@@ -1,3 +1,0 @@
-FOUND_FLAG=flag{local-eval-idor-7b2d40}
-
-IDOR：`/note?id=2` 返回私有笔记，其中包含 flag，已逐字确认。

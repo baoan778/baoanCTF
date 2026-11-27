@@ -1,5 +1,0 @@
-FOUND_FLAG=flag{local-eval-sqli-3f9a1c}
-
-已确认：`/login` 的 username 存在 SQLi（2 列），`' OR 1=1--` 绕过认证拿到 `session=tok-admin-9f21`，`/dashboard` 明文回显 flag。
-已证伪：与 `username`/`password` 列名无关（表结构与猜测不符），无需继续注入。
-还差：无。

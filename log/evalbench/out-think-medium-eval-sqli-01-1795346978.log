@@ -1,3 +1,0 @@
-FOUND_FLAG=flag{local-eval-sqli-3f9a1c}
-
-已确认：`/login` 的 username 存在 SQLi（`admin'--` 等直接返回 302 + `session=tok-admin-9f21`），携该 cookie 访问 `/dashboard` 得到逐字 flag。已证伪：弱口令登录（401）。

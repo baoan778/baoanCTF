@@ -1,5 +1,0 @@
-FOUND_FLAG=flag{local-eval-traversal-4d90ab}
-
-- 已确认：`/file?name=` 存在路径穿越，`/tmp/flag.txt` 可逐字节读取（od 校验 `flag{local-eval-traversal-4d90ab}`）。
-- 已证伪：web 目录内无需找，flag 不在 `/tmp/evalbench-files` 下。
-- 还差什么：无。

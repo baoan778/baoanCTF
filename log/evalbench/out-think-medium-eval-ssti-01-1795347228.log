@@ -1,5 +1,0 @@
-FOUND_FLAG=flag{local-eval-ssti-c58e12}
-
-- 已确认：`/hello?name=` 存在 Jinja2 SSTI；`{{7*7}}` 返回 49；`{{config}}` 泄露 `{'FLAG': 'flag{local-eval-ssti-c58e12}'}`；`{{config['FLAG']}}` 逐字回显。
-- 已证伪：根路径无参数、`${}` 与 `#{}` 不是注入点、`cycler`/`self` 被限制（无需 RCE）。
-- 还差什么：无。

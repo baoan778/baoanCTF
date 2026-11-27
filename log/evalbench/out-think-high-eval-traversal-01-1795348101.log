@@ -1,3 +1,0 @@
-FOUND_FLAG=flag{local-eval-traversal-4d90ab}
-
-已确认：`/file?name=` 存在路径穿越（绝对路径 `/proc/self/...` 亦可读）；`/tmp/flag.txt` 逐字读取并 `od -c` 字节确认（尾部仅 `\n`）。

@@ -1,3 +1,0 @@
-FOUND_FLAG=flag{local-eval-sqli-3f9a1c}
-
-Confirmed byte-exact from `/dashboard` after SQLi auth bypass (`admin' OR '1'='1'-- -` → `session=tok-admin-9f21`). Done.

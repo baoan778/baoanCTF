@@ -20,7 +20,7 @@ services:
       - "127.0.0.1:30142:30142"
     # gdb 断点 / ptrace 必需；NET_ADMIN 给 openvpn 建 tun / 改路由用
     # （★ 2026-11-04 加 NET_ADMIN：容器内起隧道缺它一定失败；不跑 tsec vpn up 就无副作用）
-    # ★ 2026-11-14 修 P2-8（实测）：PID1 是 node，没有 reaper → 僵尸堆到 60+ 个
+    # ★ 2026-11-14 修 该轮修复（实测）：PID1 是 node，没有 reaper → 僵尸堆到 60+ 个
     #   （bash/curl/sleep/sage-cleaner/openvpn 全变 <defunct>，2 小时就攒出来）。
     #   6h 跑分 + 频繁派子代理会持续涨，且僵尸 comm 仍叫 openvpn，会把「隧道在跑」判断带偏。
     #   init: true 让 docker 塞一个 tini 当 PID1 负责回收。
@@ -126,9 +126,8 @@ services:
       - ./board:/opt/pi-ctf/board:ro
       - ./skills:/opt/pi-ctf/skills:ro
       - ./docs:/opt/pi-ctf/docs:ro
-      # ★ 2026-11-26：删掉 learning/ learning-notes/ 学习清单.md learning-checklist.md
-      #   四条挂载 —— 那四份内容不再随仓库分发（开源交付只留产品，不留开发过程记录）。
-      #   留着会变成**悬空挂载点**：宿主路径不存在，容器里出现空目录，容易被误读成"文件丢了"。
+      # 注意：这里只挂**随仓库分发**的目录。挂一个不存在的宿主路径会变成悬空挂载点 ——
+      #   容器里出现空目录，容易被误读成"文件丢了"。新增挂载前先确认宿主机上真有这个目录。
       - ./agent-template:/opt/pi-ctf/agent-template:ro
       - ./prompts:/opt/pi-ctf/prompts:ro
       - ./templates:/opt/pi-ctf/templates:ro

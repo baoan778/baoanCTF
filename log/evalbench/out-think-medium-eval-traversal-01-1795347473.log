@@ -1,3 +1,0 @@
-FOUND_FLAG=flag{local-eval-traversal-4d90ab}
-
-路径穿越通过 `/file?name=` 参数成功：读取 `/tmp/flag.txt` 得到 flag，并且已逐字确认。

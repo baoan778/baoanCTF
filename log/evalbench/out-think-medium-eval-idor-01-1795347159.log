@@ -1,4 +1,0 @@
-FOUND_FLAG=flag{local-eval-idor-7b2d40}
-
-- 利用 IDOR：用 `/note?id=2` 就能直接读到标记为 private 的笔记，flag 位于 `<pre>` 块中。
-- 已逐字确认：`flag{local-eval-idor-7b2d40}`，取自靶场响应原文。

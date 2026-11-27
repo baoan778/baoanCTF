@@ -1,3 +1,0 @@
-FOUND_FLAG=flag{local-eval-idor-7b2d40}
-
-Confirmed byte-exact from `GET /note?id=2` (IDOR: private note of another account, only note 1 linked from home).

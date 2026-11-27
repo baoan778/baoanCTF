@@ -29,8 +29,8 @@ SOLVE = ROOT / "work" / "solve"
 LOGDIR = ROOT / "log"
 DIFF_ORDER = {"easy": 0, "medium": 1, "hard": 2}
 
-# ★ 2026-11-20 优化 13：预算口径从 tools/solve_policy.py 取（唯一事实来源）。
-#   原来这里是第二份副本（120/180/300 + cap 600/420），优化 #10 把真实下发的预算
+# ★ 2026-11-20 某轮优化：预算口径从 tools/solve_policy.py 取（唯一事实来源）。
+#   原来这里是第二份副本（120/180/300 + cap 600/420），某轮优化 把真实下发的预算
 #   抬到 150/300/480 后**这里没跟着改** → 实况页「待解队列」显示的下一轮预算是错的
 #   （而且偏小，看起来像预算还没调过）。
 sys.path.insert(0, str(ROOT / "tools"))
@@ -44,7 +44,7 @@ except Exception:  # noqa: BLE001
 
 
 def _alive_state(pid):
-    """进程状态字母；读不到返回 ""。★ 与 procscan 共用同一份判据（优化 13 的教训：
+    """进程状态字母；读不到返回 ""。★ 与 procscan 共用同一份判据（某轮优化 的教训：
     同一条判据抄多份必然漂移）。procscan 不可用时退化成直接读 /proc/<pid>/stat。"""
     try:
         sys.path.insert(0, str(ROOT / "tools"))
@@ -65,7 +65,7 @@ def _token_from_procs():
     tsecbench.json 里那份是上一场 run 的旧 token（用它请求恒 409 already finished）。
     所以真正的 token 必须从在跑的 shard 进程环境里借。
 
-    ★ 2026-11-20 优化 13：改走 procscan（原来用 `"sdkshard.py" in ps 行` 子串匹配，
+    ★ 2026-11-20 某轮优化：改走 procscan（原来用 `"sdkshard.py" in ps 行` 子串匹配，
     任何提到该文件名的命令行都会被当成 shard 去读 environ —— 读到的是别的进程，
     token 自然借不到，界面就退化成 409 降级）。
     """
@@ -226,7 +226,7 @@ def ledger():
 def procs():
     """在跑的解题进程：sdkshard（每路一个）+ parallel_solver（总控）+ 每题一个 pi。
 
-    ★★ 2026-11-20 优化 13（实况页「pi 子进程永远是 0」的根因，实测确认）：
+    ★★ 2026-11-20 某轮优化（实况页「pi 子进程永远是 0」的根因，实测确认）：
       原实现按 `"/dist/bundle/cli.js" in ln` 找 pi 子进程 —— 但 pi 启动后会把 argv
       重写成 `["pi"]`（Node 的 process.title 行为），`ps` 里**根本没有 cli.js**：
 
@@ -308,7 +308,7 @@ def cost_gate():
     这里只读它「上一次的判断」+ 环境里的阈值，给界面一个能显示的数字。
 
     ★ 2026-11-20 血账：整轮余额 3.97→1.12 CNY，而实况页**从头到尾没有任何余额字段**，
-      用户只能靠我自己在外面 curl。P2-7「余额对用户不可见」就是这条。
+      用户只能靠我自己在外面 curl。该轮修复「余额对用户不可见」就是这条。
     """
     out = {"min_cny": None, "balance": None, "currency": None, "blocked": False}
     try:

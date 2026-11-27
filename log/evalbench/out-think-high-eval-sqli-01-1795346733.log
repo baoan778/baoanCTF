@@ -1,3 +1,0 @@
-FOUND_FLAG=flag{local-eval-sqli-3f9a1c}
-
-（登录框 SQL 注入：`username=admin'-- -` → 302 到 `/dashboard` + `session=tok-admin-9f21`，带 cookie 请求 `/dashboard` 逐字回显 flag。）

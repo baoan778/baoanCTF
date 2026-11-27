@@ -1,5 +1,0 @@
-FOUND_FLAG=flag{local-eval-sqli-3f9a1c}
-
-- 已确认：登录处存在 SQL 注入（`admin' --`、`' OR 1=1--`、`admin'/*` 均可绕过登录）；使用返回的 `session=tok-admin-9f21` 访问 `/dashboard` 后，在响应中逐字回显了 flag。
-- 已证伪：无需暴力破解口令，也无需其他攻击面。
-- 还差什么：无。

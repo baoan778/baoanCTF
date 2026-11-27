@@ -1,3 +1,0 @@
-FOUND_FLAG=flag{local-eval-sqli-3f9a1c}
-
-已确认：登录 SQLi 绕过（`admin' -- `）→ 302 到 `/dashboard`，cookie `session=tok-admin-9f21`，仪表盘原样返回 `flag{local-eval-sqli-3f9a1c}`。

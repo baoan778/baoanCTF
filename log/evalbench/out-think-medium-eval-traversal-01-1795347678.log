@@ -1,5 +1,0 @@
-FOUND_FLAG=flag{local-eval-traversal-4d90ab}
-
-- 已确认：`/file?name=../flag.txt` 直接返回该 flag（逐字来自靶场响应体，Content-Length 34）。
-- 已证伪：`/flag`、`/root/flag`、`/home/ctf/flag*` 等常见落点均不存在；`.git/.env/robots` 无。
-- 还差：无。

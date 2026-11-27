@@ -1,3 +1,0 @@
-FOUND_FLAG=flag{local-eval-ssti-c58e12}
-
-已确认：访问 `/hello?name=` 时，服务端会使用 Jinja2 渲染参数，因此可执行 `{{7*7}}`，得到 49；也可执行 `{{config}}`，直接取得 `FLAG`。该 flag 的原始字符串已从靶场响应中原样取得。

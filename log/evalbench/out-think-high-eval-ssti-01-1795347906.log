@@ -1,3 +1,0 @@
-FOUND_FLAG=flag{local-eval-ssti-c58e12}
-
-- 关键事实：`/hello?name=` 参数存在 Jinja2 SSTI（`{{7*7}}`→49），`{{config}}` 泄露 `{'FLAG': 'flag{local-eval-ssti-c58e12}'}`，逐字取证自靶机响应。

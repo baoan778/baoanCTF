@@ -1,3 +1,0 @@
-FOUND_FLAG=flag{local-eval-sqli-3f9a1c}
-
-已通过 SQLi 认证绕过（`username=admin'--&password=x`）取得 admin session，`/dashboard` 直接返回 flag。

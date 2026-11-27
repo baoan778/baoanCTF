@@ -1,3 +1,0 @@
-Found it via IDOR on `/note?id=2` (private note, no auth check).
-
-FOUND_FLAG=flag{local-eval-idor-7b2d40}

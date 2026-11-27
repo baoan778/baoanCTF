@@ -1,4 +1,0 @@
-已通过 IDOR 拿到 flag（id=2 的私有笔记）。
-
-FOUND_FLAG=flag{local-eval-idor-7b2d40}
-
